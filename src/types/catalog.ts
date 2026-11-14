@@ -1,3 +1,4 @@
+import type { Paginated } from "./api";
 import type { Game, GameGenre, GamePlatform } from "./game";
 
 /**
@@ -30,4 +31,34 @@ export const emptyCatalogFilters: CatalogFilters = {
   query: "",
   platform: "all",
   genre: "all",
+};
+
+/** Where a catalog response came from: the live RAWG database or the bundled demo set. */
+export type CatalogSource = "rawg" | "mock";
+
+export type CatalogQueryParams = {
+  search?: string;
+  platform?: PlatformFilter;
+  genre?: GenreFilter;
+  page?: number;
+  pageSize?: number;
+};
+
+export type CatalogPage = Paginated<GameCatalogEntry> & {
+  source: CatalogSource;
+};
+
+export type CatalogSections = {
+  featured: GameCatalogEntry | null;
+  trending: readonly GameCatalogEntry[];
+  popular: readonly GameCatalogEntry[];
+  upcoming: readonly GameCatalogEntry[];
+  recentlyReleased: readonly GameCatalogEntry[];
+  source: CatalogSource;
+};
+
+export type GameDetailResult = {
+  game: GameCatalogEntry;
+  similar: readonly GameCatalogEntry[];
+  source: CatalogSource;
 };

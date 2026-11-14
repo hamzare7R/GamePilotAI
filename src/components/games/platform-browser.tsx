@@ -1,25 +1,20 @@
 import { Check, ChevronRight } from "lucide-react";
 
 import { platformList } from "@/config/catalog";
-import { countGamesByPlatform } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
-import type { GameCatalogEntry, PlatformFilter } from "@/types/catalog";
+import type { PlatformFilter } from "@/types/catalog";
 
 type PlatformBrowserProps = {
-  games: readonly GameCatalogEntry[];
   active: PlatformFilter;
   onSelect: (platform: PlatformFilter) => void;
 };
 
-export function PlatformBrowser({ games, active, onSelect }: PlatformBrowserProps) {
-  const counts = countGamesByPlatform(games);
-
+export function PlatformBrowser({ active, onSelect }: PlatformBrowserProps) {
   return (
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
       {platformList.map((platform) => {
         const Icon = platform.icon;
         const isActive = active === platform.id;
-        const count = counts.get(platform.id) ?? 0;
 
         return (
           <button
@@ -58,7 +53,7 @@ export function PlatformBrowser({ games, active, onSelect }: PlatformBrowserProp
                 )}
               </span>
               <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                {count} {count === 1 ? "game" : "games"}
+                {platform.shortCoverage}
               </span>
             </span>
           </button>

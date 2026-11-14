@@ -4,18 +4,21 @@ import { Play } from "lucide-react";
 import { PlatformStack } from "@/components/games/platform-stack";
 import { RatingBadge } from "@/components/games/rating-badge";
 import { Badge } from "@/components/ui/badge";
-import { describeGameTags, formatPlayers, isNewRelease } from "@/lib/catalog";
+import { describeGameTags, formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import type { GameCatalogEntry } from "@/types/catalog";
 
 type GameCardProps = {
   game: GameCatalogEntry;
   onOpen: (game: GameCatalogEntry) => void;
+  showReleaseDate?: boolean;
   className?: string;
 };
 
-export function GameCard({ game, onOpen, className }: GameCardProps) {
-  const year = game.releaseDate?.slice(0, 4) ?? "TBA";
+export function GameCard({ game, onOpen, showReleaseDate, className }: GameCardProps) {
+  const dateLabel = showReleaseDate
+    ? formatReleaseDate(game.releaseDate)
+    : (game.releaseDate?.slice(0, 4) ?? "TBA");
 
   return (
     <article
@@ -60,7 +63,7 @@ export function GameCard({ game, onOpen, className }: GameCardProps) {
         <div className="min-w-0">
           <h3 className="truncate font-display text-sm font-semibold">{game.title}</h3>
           <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            {describeGameTags(game)} · {year}
+            {describeGameTags(game)} · {dateLabel}
           </p>
         </div>
         <div className="flex items-center justify-between gap-2">

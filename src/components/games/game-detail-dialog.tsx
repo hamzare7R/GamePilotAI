@@ -1,5 +1,7 @@
+"use client";
+
 import Image from "next/image";
-import { Check, Plus } from "lucide-react";
+import { Check, Loader2, Plus, RefreshCw } from "lucide-react";
 
 import { RatingBadge } from "@/components/games/rating-badge";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +14,9 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformMeta } from "@/config/catalog";
+import { useGameDetail } from "@/hooks/api/use-game-detail";
 import { formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
 import type { GameCatalogEntry } from "@/types/catalog";
 
@@ -22,6 +26,7 @@ type GameDetailDialogProps = {
   onOpenChange: (open: boolean) => void;
   inLibrary: boolean;
   onToggleLibrary: (game: GameCatalogEntry) => void;
+  onSelectGame?: (game: GameCatalogEntry) => void;
 };
 
 export function GameDetailDialog({
@@ -30,18 +35,23 @@ export function GameDetailDialog({
   onOpenChange,
   inLibrary,
   onToggleLibrary,
+  onSelectGame,
 }: GameDetailDialogProps) {
-  const players = formatPlayers(game?.playersOnline);
+  const detailQuery = useGameDetail(game?.id, open);
+  const detail = detailQuery.data?.game ?? game;
+  const similar = detailQuery.data?.similar ?? [];
+  const players = formatPlayers(detail?.playersOnline);
+  const isLoadingDetail = detailQuery.isPending && Boolean(game);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-2xl">
-        {game ? (
+        {detail ? (
           <>
             <div className="relative h-52 w-full shrink-0 sm:h-60">
               <Image
-                src={game.heroUrl ?? game.coverUrl}
-                alt={`${game.title} key art`}
+                src={detail.heroUrl ?? detail.coverUrl}
+                alt={`${detail.title} key art`}
                 fill
                 sizes="(min-width: 640px) 672px, 100vw"
                 className="object-cover"
@@ -49,28 +59,57 @@ export function GameDetailDialog({
               <div className="absolute inset-0 bg-linear-to-t from-card via-card/55 to-transparent" />
               <div className="absolute inset-x-5 bottom-4 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <RatingBadge rating={game.rating} />
-                  {isNewRelease(game) ? <Badge variant="blue">New release</Badge> : null}
-                  {game.trendingRank ? (
+                  <RatingBadge rating={detail.rating} />
+                  {isNewRelease(detail) ? <Badge variant="blue">New release</Badge> : null}
+                  {detail.trendingRank ? (
                     <Badge variant="outline" className="bg-black/40">
-                      #{game.trendingRank} trending
+                      #{detail.trendingRank} trending
                     </Badge>
                   ) : null}
                 </div>
                 <DialogTitle className="font-display text-2xl font-semibold sm:text-3xl">
-                  {game.title}
+                  {detail.title}
                 </DialogTitle>
-                <DialogDescription className="text-sm text-foreground/70">
-                  {game.tagline}
+                <DialogDescription className="line-clamp-2 text-sm text-foreground/70">
+                  {detail.tagline}
                 </DialogDescription>
               </div>
             </div>
 
             <div className="space-y-5 px-5 pb-5">
-              <p className="text-sm leading-relaxed text-muted-foreground">{game.description}</p>
+              {detailQuery.isError ? (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  <span className="flex-1">Couldn&apos;t load the full details for this game.</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void detailQuery.refetch()}
+                    className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <RefreshCw aria-hidden="true" />
+                    Retry
+                  </Button>
+                </div>
+              ) : null}
+
+              {detail.description ? (
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {detail.description}
+                </p>
+              ) : isLoadingDetail ? (
+                <div className="space-y-2" aria-hidden="true">
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-11/12" />
+                  <Skeleton className="h-3.5 w-4/5" />
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No description is available for this title yet.
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-2">
-                {game.genres.map((genre) => (
+                {detail.genres.map((genre) => (
                   <Badge key={genre} variant="secondary">
                     {genreLabels[genre]}
                   </Badge>
@@ -83,7 +122,7 @@ export function GameDetailDialog({
                     Available on
                   </p>
                   <ul className="mt-2 space-y-1.5">
-                    {game.platforms.map((platform) => {
+                    {detail.platforms.map((platform) => {
                       const meta = platformMeta[platform];
                       const Icon = meta.icon;
 
@@ -96,7 +135,9 @@ export function GameDetailDialog({
                             <Icon className={`size-4 ${meta.accent}`} aria-hidden="true" />
                             {meta.label}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">· {meta.coverage}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            · {meta.coverage}
+                          </span>
                         </li>
                       );
                     })}
@@ -104,17 +145,23 @@ export function GameDetailDialog({
                 </div>
 
                 <dl className="space-y-2 text-xs">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-muted-foreground">Developer</dt>
-                    <dd className="text-right font-medium">{game.developer}</dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <dt className="text-muted-foreground">Publisher</dt>
-                    <dd className="text-right font-medium">{game.publisher}</dd>
-                  </div>
+                  {detail.developer ? (
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-muted-foreground">Developer</dt>
+                      <dd className="text-right font-medium">{detail.developer}</dd>
+                    </div>
+                  ) : null}
+                  {detail.publisher ? (
+                    <div className="flex items-baseline justify-between gap-3">
+                      <dt className="text-muted-foreground">Publisher</dt>
+                      <dd className="text-right font-medium">{detail.publisher}</dd>
+                    </div>
+                  ) : null}
                   <div className="flex items-baseline justify-between gap-3">
                     <dt className="text-muted-foreground">Release</dt>
-                    <dd className="text-right font-medium">{formatReleaseDate(game.releaseDate)}</dd>
+                    <dd className="text-right font-medium">
+                      {formatReleaseDate(detail.releaseDate)}
+                    </dd>
                   </div>
                   {players ? (
                     <div className="flex items-baseline justify-between gap-3">
@@ -125,6 +172,65 @@ export function GameDetailDialog({
                 </dl>
               </div>
 
+              <div className="space-y-3 border-t border-border/60 pt-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold">More like this</h3>
+                  {detailQuery.isFetching && !isLoadingDetail ? (
+                    <Loader2
+                      className="size-3.5 animate-spin text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                </div>
+
+                {isLoadingDetail ? (
+                  <div className="grid grid-cols-3 gap-2.5" aria-hidden="true">
+                    {Array.from({ length: 3 }).map((_, index) => (
+                      <div key={index} className="space-y-1.5">
+                        <Skeleton className="aspect-3/4 w-full rounded-lg" />
+                        <Skeleton className="h-3 w-4/5" />
+                      </div>
+                    ))}
+                  </div>
+                ) : similar.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {similar.map((similarGame) => (
+                      <button
+                        key={similarGame.id}
+                        type="button"
+                        onClick={() => onSelectGame?.(similarGame)}
+                        className="group text-left focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
+                      >
+                        <span className="relative block aspect-3/4 overflow-hidden rounded-lg border border-border/70 bg-card">
+                          <Image
+                            src={similarGame.coverUrl}
+                            alt={`${similarGame.title} cover art`}
+                            fill
+                            sizes="(min-width: 640px) 140px, 30vw"
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                          <span className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
+                          <RatingBadge
+                            rating={similarGame.rating}
+                            className="absolute top-1.5 left-1.5"
+                          />
+                        </span>
+                        <span className="mt-1.5 block truncate text-xs font-medium">
+                          {similarGame.title}
+                        </span>
+                        <span className="block truncate text-[10px] text-muted-foreground">
+                          {similarGame.releaseDate?.slice(0, 4) ?? "TBA"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    No similar games found for this title.
+                  </p>
+                )}
+              </div>
+
               <DialogFooter>
                 <DialogClose asChild>
                   <Button variant="ghost">Close</Button>
@@ -132,7 +238,7 @@ export function GameDetailDialog({
                 <Button
                   variant={inLibrary ? "secondary" : "default"}
                   aria-pressed={inLibrary}
-                  onClick={() => onToggleLibrary(game)}
+                  onClick={() => onToggleLibrary(detail)}
                 >
                   {inLibrary ? (
                     <>

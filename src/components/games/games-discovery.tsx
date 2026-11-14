@@ -1,89 +1,49 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useRef, useState } from "react";
 import {
   CalendarClock,
+  Clock,
   Flame,
   Gamepad2,
-  Search,
-  SearchX,
-  SlidersHorizontal,
-  X,
-  type LucideIcon,
+  Rocket,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
+import { CatalogExplorer } from "@/components/games/catalog-explorer";
+import { CategoryBrowser } from "@/components/games/category-browser";
 import { FeaturedGameHero } from "@/components/games/featured-game-hero";
 import { GameDetailDialog } from "@/components/games/game-detail-dialog";
 import { GameGrid } from "@/components/games/game-grid";
 import { PlatformBrowser } from "@/components/games/platform-browser";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { genreFilterOptions, genreLabels, platformList } from "@/config/catalog";
-import { filterGames, getGameSections, hasActiveFilters } from "@/lib/catalog";
-import { cn } from "@/lib/utils";
+import { hasActiveFilters } from "@/lib/catalog";
 import {
   emptyCatalogFilters,
   type CatalogFilters,
+  type CatalogSections,
   type GameCatalogEntry,
   type GenreFilter,
   type PlatformFilter,
 } from "@/types/catalog";
 
 type GamesDiscoveryProps = {
-  games: readonly GameCatalogEntry[];
-  featured: GameCatalogEntry;
+  sections: CatalogSections;
 };
 
-function FilterChip({
-  active,
-  onClick,
-  icon: Icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon?: LucideIcon;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
-        "focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none",
-        active
-          ? "border-primary/60 bg-primary/15 text-primary shadow-[0_0_20px_-8px_rgb(168_85_247/0.9)]"
-          : "border-border/70 bg-background/40 text-muted-foreground hover:border-primary/30 hover:text-foreground",
-      )}
-    >
-      {Icon ? <Icon className="size-3.5" aria-hidden="true" /> : null}
-      {children}
-    </button>
-  );
-}
-
-export function GamesDiscovery({ games, featured }: GamesDiscoveryProps) {
+export function GamesDiscovery({ sections }: GamesDiscoveryProps) {
   const [filters, setFilters] = useState<CatalogFilters>(emptyCatalogFilters);
+  const [browseAll, setBrowseAll] = useState(false);
   const [libraryIds, setLibraryIds] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [activeGame, setActiveGame] = useState<GameCatalogEntry | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const explorerRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => filterGames(games, filters), [games, filters]);
-  const sections = useMemo(() => getGameSections(games), [games]);
-  const isFiltering = hasActiveFilters(filters);
+  const searchMode = browseAll || hasActiveFilters(filters);
 
-  const updateFilters = (patch: Partial<CatalogFilters>) => {
-    setFilters((previous) => ({ ...previous, ...patch }));
-  };
-
-  const handlePlatformSelect = (platform: PlatformFilter) => {
-    updateFilters({ platform });
+  const scrollToExplorer = () => {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     explorerRef.current?.scrollIntoView({
       behavior: reduceMotion ? "auto" : "smooth",
@@ -91,7 +51,24 @@ export function GamesDiscovery({ games, featured }: GamesDiscoveryProps) {
     });
   };
 
-  const handleGenreSelect = (genre: GenreFilter) => updateFilters({ genre });
+  const updateFilters = (patch: Partial<CatalogFilters>) => {
+    setFilters((previous) => ({ ...previous, ...patch }));
+  };
+
+  const handlePlatformSelect = (platform: PlatformFilter) => {
+    updateFilters({ platform });
+    scrollToExplorer();
+  };
+
+  const handleGenreSelect = (genre: GenreFilter) => {
+    updateFilters({ genre });
+    scrollToExplorer();
+  };
+
+  const handleReset = () => {
+    setFilters(emptyCatalogFilters);
+    setBrowseAll(false);
+  };
 
   const handleOpen = (game: GameCatalogEntry) => {
     setActiveGame(game);
@@ -110,22 +87,29 @@ export function GamesDiscovery({ games, featured }: GamesDiscoveryProps) {
     });
   };
 
-  const resetFilters = () => setFilters(emptyCatalogFilters);
-
-  const activeFilterCount = [
-    filters.query.trim(),
-    filters.platform !== "all" ? filters.platform : "",
-    filters.genre !== "all" ? filters.genre : "",
-  ].filter(Boolean).length;
+  const trending = sections.trending;
 
   return (
     <div className="space-y-10">
-      <FeaturedGameHero
-        game={featured}
-        inLibrary={libraryIds.has(featured.id)}
-        onToggleLibrary={handleToggleLibrary}
-        onOpen={handleOpen}
-      />
+      {sections.featured ? (
+        <FeaturedGameHero
+          game={sections.featured}
+          inLibrary={libraryIds.has(sections.featured.id)}
+          onToggleLibrary={handleToggleLibrary}
+          onOpen={handleOpen}
+        />
+      ) : (
+        <EmptyState
+          icon={Gamepad2}
+          title="No featured game yet"
+          description="The catalog responded without a highlight. Search below or retry in a moment."
+          action={
+            <Badge variant="outline" className="mt-1">
+              {sections.source === "rawg" ? "Live RAWG catalog" : "Demo catalog"}
+            </Badge>
+          }
+        />
+      )}
 
       <section id="platforms" aria-labelledby="platforms-title" className="scroll-mt-24 space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -137,222 +121,127 @@ export function GamesDiscovery({ games, featured }: GamesDiscoveryProps) {
               Browse by platform
             </h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Seven ecosystems, one catalog. Pick a platform to filter everything below.
+              Seven ecosystems, one catalog. Pick a platform to filter every section below.
             </p>
           </div>
           {filters.platform !== "all" ? (
-            <Button variant="ghost" size="sm" onClick={() => updateFilters({ platform: "all" })}>
-              Clear platform
-              <X aria-hidden="true" />
-            </Button>
-          ) : (
-            <Badge variant="outline">{games.length} games</Badge>
-          )}
-        </div>
-
-        <PlatformBrowser games={games} active={filters.platform} onSelect={handlePlatformSelect} />
-      </section>
-
-      <div ref={explorerRef} id="explore" className="scroll-mt-20 space-y-6">
-        <div className="space-y-4 rounded-2xl border border-border/70 bg-card/40 p-4 backdrop-blur-xl sm:p-5">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="flex size-9 items-center justify-center rounded-lg border border-primary/25 bg-gradient-brand-soft text-primary">
-                <SlidersHorizontal className="size-4" aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="font-display text-lg font-semibold">Explore the catalog</h2>
-                <p className="text-xs text-muted-foreground">
-                  {isFiltering
-                    ? `${filtered.length} of ${games.length} games match your filters`
-                    : `${games.length} games across ${platformList.length} platforms`}
-                </p>
-              </div>
-            </div>
-
-            <form
-              role="search"
-              onSubmit={(event) => event.preventDefault()}
-              className="relative w-full lg:max-w-sm"
+            <button
+              type="button"
+              onClick={() => updateFilters({ platform: "all" })}
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
             >
-              <label htmlFor="game-search" className="sr-only">
-                Search games
-              </label>
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                id="game-search"
-                type="search"
-                value={filters.query}
-                autoComplete="off"
-                placeholder="Search titles, studios, genres…"
-                onChange={(event) => updateFilters({ query: event.target.value })}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") updateFilters({ query: "" });
-                }}
-                className="h-10 bg-background/60 pr-9 pl-9"
-              />
-              {filters.query ? (
-                <button
-                  type="button"
-                  onClick={() => updateFilters({ query: "" })}
-                  aria-label="Clear search"
-                  className="absolute top-1/2 right-2 -translate-y-1/2 rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              ) : null}
-            </form>
-          </div>
-
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[11px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
-                Genre
-              </span>
-              <FilterChip active={filters.genre === "all"} onClick={() => handleGenreSelect("all")}>
-                All
-              </FilterChip>
-              {genreFilterOptions.map((genre) => (
-                <FilterChip
-                  key={genre.id}
-                  active={filters.genre === genre.id}
-                  onClick={() => handleGenreSelect(genre.id)}
-                >
-                  {genre.label}
-                </FilterChip>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="mr-1 text-[11px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
-                Platform
-              </span>
-              <FilterChip
-                active={filters.platform === "all"}
-                onClick={() => updateFilters({ platform: "all" })}
-              >
-                All platforms
-              </FilterChip>
-              {platformList.map((platform) => (
-                <FilterChip
-                  key={platform.id}
-                  active={filters.platform === platform.id}
-                  icon={platform.icon}
-                  onClick={() => updateFilters({ platform: platform.id })}
-                >
-                  {platform.shortLabel}
-                </FilterChip>
-              ))}
-            </div>
-          </div>
-
-          {isFiltering ? (
-            <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
-              <span className="text-[11px] font-semibold tracking-widest text-muted-foreground/70 uppercase">
-                Active
-              </span>
-              {filters.query.trim() ? (
-                <Badge variant="default" className="gap-1.5">
-                  “{filters.query.trim()}”
-                  <button
-                    type="button"
-                    onClick={() => updateFilters({ query: "" })}
-                    aria-label="Remove search filter"
-                    className="transition-opacity hover:opacity-70"
-                  >
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
-                </Badge>
-              ) : null}
-              {filters.platform !== "all" ? (
-                <Badge variant="blue" className="gap-1.5">
-                  {platformList.find((platform) => platform.id === filters.platform)?.label}
-                  <button
-                    type="button"
-                    onClick={() => updateFilters({ platform: "all" })}
-                    aria-label="Remove platform filter"
-                    className="transition-opacity hover:opacity-70"
-                  >
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
-                </Badge>
-              ) : null}
-              {filters.genre !== "all" ? (
-                <Badge variant="secondary" className="gap-1.5">
-                  {genreLabels[filters.genre]}
-                  <button
-                    type="button"
-                    onClick={() => updateFilters({ genre: "all" })}
-                    aria-label="Remove genre filter"
-                    className="transition-opacity hover:opacity-70"
-                  >
-                    <X className="size-3" aria-hidden="true" />
-                  </button>
-                </Badge>
-              ) : null}
-              <span className="ml-auto text-xs text-muted-foreground">
-                {activeFilterCount} active
-              </span>
-              <Button variant="ghost" size="sm" onClick={resetFilters}>
-                Reset all
-              </Button>
-            </div>
+              Clear platform
+            </button>
           ) : null}
         </div>
 
-        {isFiltering ? (
-          filtered.length > 0 ? (
-            <GameGrid
-              id="results"
-              icon={Search}
-              title="Search results"
-              description="Matching every active filter"
-              games={filtered}
-              onOpen={handleOpen}
-            />
-          ) : (
-            <EmptyState
-              icon={SearchX}
-              title="No games match those filters"
-              description="Try a different title, or loosen the platform and genre filters."
-              action={
-                <Button variant="secondary" onClick={resetFilters}>
-                  Reset filters
-                </Button>
-              }
-            />
-          )
-        ) : (
-          <div className="space-y-8">
-            <GameGrid
-              id="trending"
-              icon={Flame}
-              title="Trending games"
-              description="What pilots are launching right now"
-              games={sections.trending}
-              onOpen={handleOpen}
-            />
-            <GameGrid
-              id="new-releases"
-              icon={CalendarClock}
-              title="New releases"
-              description="Freshly shipped across every platform"
-              games={sections.newReleases}
-              onOpen={handleOpen}
-            />
-            <GameGrid
-              id="more-games"
-              icon={Gamepad2}
-              title="More to discover"
-              description="Long-tail favorites and quiet hits"
-              games={sections.more}
-              onOpen={handleOpen}
-            />
+        <PlatformBrowser active={filters.platform} onSelect={handlePlatformSelect} />
+      </section>
+
+      <section
+        id="categories"
+        aria-labelledby="categories-title"
+        className="scroll-mt-24 space-y-4"
+      >
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2
+              id="categories-title"
+              className="font-display text-xl font-semibold tracking-tight sm:text-2xl"
+            >
+              Game categories
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Twelve ways in. Pick a category to jump straight to matching games.
+            </p>
           </div>
-        )}
+          {filters.genre !== "all" ? (
+            <button
+              type="button"
+              onClick={() => updateFilters({ genre: "all" })}
+              className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
+            >
+              Clear category
+            </button>
+          ) : null}
+        </div>
+
+        <CategoryBrowser active={filters.genre} onSelect={handleGenreSelect} />
+      </section>
+
+      <div ref={explorerRef} id="explore" className="scroll-mt-20 space-y-8">
+        <CatalogExplorer
+          filters={filters}
+          searchMode={searchMode}
+          browseAll={browseAll}
+          onChange={updateFilters}
+          onReset={handleReset}
+          onBrowseAll={() => setBrowseAll(true)}
+          onOpenGame={handleOpen}
+        />
+
+        {!searchMode ? (
+          <div className="space-y-8">
+            {trending.length > 0 ? (
+              <GameGrid
+                id="trending"
+                icon={Flame}
+                title="Trending games"
+                description="What players are launching right now"
+                games={trending}
+                onOpen={handleOpen}
+              />
+            ) : null}
+
+            {sections.popular.length > 0 ? (
+              <GameGrid
+                id="popular"
+                icon={TrendingUp}
+                title="Popular games"
+                description="The highest-rated titles players keep coming back to"
+                games={sections.popular}
+                onOpen={handleOpen}
+              />
+            ) : null}
+
+            {sections.upcoming.length > 0 ? (
+              <GameGrid
+                id="upcoming"
+                icon={Rocket}
+                title="Upcoming games"
+                description="Confirmed releases on the horizon"
+                games={sections.upcoming}
+                onOpen={handleOpen}
+                showReleaseDate
+              />
+            ) : null}
+
+            {sections.recentlyReleased.length > 0 ? (
+              <GameGrid
+                id="new-releases"
+                icon={Clock}
+                title="Recently released"
+                description="Fresh out of the gate in the last 90 days"
+                games={sections.recentlyReleased}
+                onOpen={handleOpen}
+                showReleaseDate
+              />
+            ) : null}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/60 bg-card/30 px-4 py-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-2">
+                <Sparkles className="size-3.5 text-primary" aria-hidden="true" />
+                {sections.source === "rawg"
+                  ? "Sections are pulled live from RAWG and cached for an hour."
+                  : "Running on the bundled demo catalog. Add RAWG_API_KEY for live data."}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <CalendarClock className="size-3.5" aria-hidden="true" />
+                Updated hourly
+              </span>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <GameDetailDialog
@@ -361,6 +250,7 @@ export function GamesDiscovery({ games, featured }: GamesDiscoveryProps) {
         onOpenChange={setDetailOpen}
         inLibrary={activeGame ? libraryIds.has(activeGame.id) : false}
         onToggleLibrary={handleToggleLibrary}
+        onSelectGame={handleOpen}
       />
     </div>
   );

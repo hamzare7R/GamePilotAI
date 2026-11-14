@@ -65,17 +65,21 @@ export function FeaturedGameHero({
           </h2>
           <div className="h-1 w-16 rounded-full bg-gradient-brand" />
           <p className="text-sm leading-relaxed text-foreground/80 sm:text-base">{game.tagline}</p>
-          <p className="hidden max-w-lg text-sm leading-relaxed text-muted-foreground sm:block">
-            {game.description}
-          </p>
+          {game.description ? (
+            <p className="hidden max-w-lg text-sm leading-relaxed text-muted-foreground sm:block">
+              {game.description}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5 text-amber-200">
-            <Star className="size-4 fill-amber-300 text-amber-300" aria-hidden="true" />
-            <span className="font-semibold text-amber-100">{game.rating?.toFixed(1)}</span>
-            <span className="text-amber-200/60">/ 10</span>
-          </span>
+          {game.rating ? (
+            <span className="inline-flex items-center gap-1.5 text-amber-200">
+              <Star className="size-4 fill-amber-300 text-amber-300" aria-hidden="true" />
+              <span className="font-semibold text-amber-100">{game.rating.toFixed(1)}</span>
+              <span className="text-amber-200/60">/ 10</span>
+            </span>
+          ) : null}
           {players ? (
             <span className="inline-flex items-center gap-1.5">
               <Users className="size-4" aria-hidden="true" />
@@ -117,14 +121,18 @@ export function FeaturedGameHero({
         </div>
 
         <dl className="hidden flex-wrap gap-x-8 gap-y-2 border-t border-white/10 pt-4 text-xs sm:flex">
-          <div>
-            <dt className="text-muted-foreground/70">Developer</dt>
-            <dd className="mt-0.5 font-medium text-foreground/90">{game.developer}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground/70">Publisher</dt>
-            <dd className="mt-0.5 font-medium text-foreground/90">{game.publisher}</dd>
-          </div>
+          {game.developer ? (
+            <div>
+              <dt className="text-muted-foreground/70">Developer</dt>
+              <dd className="mt-0.5 font-medium text-foreground/90">{game.developer}</dd>
+            </div>
+          ) : null}
+          {game.publisher ? (
+            <div>
+              <dt className="text-muted-foreground/70">Publisher</dt>
+              <dd className="mt-0.5 font-medium text-foreground/90">{game.publisher}</dd>
+            </div>
+          ) : null}
           <div>
             <dt className="text-muted-foreground/70">Platforms</dt>
             <dd className="mt-0.5 font-medium text-foreground/90">

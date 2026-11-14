@@ -12,10 +12,20 @@ type GameGridProps = {
   icon?: LucideIcon;
   games: readonly GameCatalogEntry[];
   onOpen: (game: GameCatalogEntry) => void;
+  showReleaseDate?: boolean;
   className?: string;
 };
 
-export function GameGrid({ id, title, description, icon: Icon, games, onOpen, className }: GameGridProps) {
+export function GameGrid({
+  id,
+  title,
+  description,
+  icon: Icon,
+  games,
+  onOpen,
+  showReleaseDate,
+  className,
+}: GameGridProps) {
   return (
     <section id={id} aria-label={title} className={cn("scroll-mt-24 space-y-4", className)}>
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -37,7 +47,12 @@ export function GameGrid({ id, title, description, icon: Icon, games, onOpen, cl
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {games.map((game) => (
-          <GameCard key={game.id} game={game} onOpen={onOpen} />
+          <GameCard
+            key={game.id}
+            game={game}
+            onOpen={onOpen}
+            showReleaseDate={showReleaseDate}
+          />
         ))}
       </div>
     </section>

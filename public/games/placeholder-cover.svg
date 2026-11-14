@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800" role="img" aria-label="Cover art unavailable">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#141026"/>
+      <stop offset="55%" stop-color="#0b0b14"/>
+      <stop offset="100%" stop-color="#1a1030"/>
+    </linearGradient>
+    <linearGradient id="neon" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="55%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="600" height="800" fill="url(#bg)"/>
+  <rect width="600" height="800" fill="url(#glow)"/>
+  <g stroke="#ffffff" stroke-opacity="0.05">
+    <path d="M0 200h600M0 400h600M0 600h600M200 0v800M400 0v800"/>
+  </g>
+  <g transform="translate(300 372)" fill="none" stroke="url(#neon)" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="-104" y="-58" width="208" height="116" rx="52"/>
+    <path d="M-58 -18v36M-76 0h36"/>
+    <circle cx="58" cy="-14" r="10" fill="url(#neon)" stroke="none"/>
+    <circle cx="82" cy="12" r="10" fill="url(#neon)" stroke="none"/>
+  </g>
+  <text x="300" y="540" text-anchor="middle" fill="#e6e6f0" font-family="Verdana, sans-serif" font-size="26" font-weight="700" letter-spacing="6">GAMEPILOT</text>
+  <text x="300" y="582" text-anchor="middle" fill="#8f8fab" font-family="Verdana, sans-serif" font-size="16" letter-spacing="4">COVER ART UNAVAILABLE</text>
+  <rect x="252" y="620" width="96" height="3" rx="1.5" fill="url(#neon)"/>
+</svg>

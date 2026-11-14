@@ -1,3 +1,4 @@
+import type { CatalogQueryParams } from "@/types/catalog";
 import type { ListGamesParams, ListLibraryParams } from "@/types/game";
 
 export const queryKeys = {
@@ -5,6 +6,12 @@ export const queryKeys = {
     all: ["games"] as const,
     list: (params: ListGamesParams = {}) => [...queryKeys.games.all, "list", params] as const,
     detail: (gameId: string) => [...queryKeys.games.all, "detail", gameId] as const,
+  },
+  catalog: {
+    all: ["catalog"] as const,
+    search: (params: CatalogQueryParams = {}) =>
+      [...queryKeys.catalog.all, "search", params] as const,
+    detail: (gameId: string) => [...queryKeys.catalog.all, "detail", gameId] as const,
   },
   library: {
     all: ["library"] as const,

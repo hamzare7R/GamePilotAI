@@ -19,6 +19,10 @@ export type GameGenre =
   | "horror"
   | "puzzle"
   | "mmo"
+  | "indie"
+  | "survival"
+  | "open-world"
+  | "multiplayer"
   | "other";
 
 export type GameStatus = "backlog" | "playing" | "completed" | "dropped" | "wishlist";
