@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformList } from "@/config/catalog";
 import { useCatalogSearch } from "@/hooks/api/use-catalog-search";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { ApiError } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import type { CatalogFilters, GameCatalogEntry, PlatformFilter } from "@/types/catalog";
 
@@ -109,11 +110,22 @@ export function CatalogExplorer({
   const total = data?.pages[0]?.pagination.total ?? 0;
   const isSettling = filters.query !== debouncedQuery;
   const isBusy = isSettling || (query.isFetching && !isFetchingNextPage);
+  const errorCode = query.error instanceof ApiError ? query.error.code : undefined;
+  const isInvalidFilter = errorCode === "INVALID_QUERY";
+  const activeFilterLabels = [
+    filters.platform !== "all"
+      ? platformList.find((platform) => platform.id === filters.platform)?.shortLabel
+      : null,
+    filters.genre !== "all" ? genreLabels[filters.genre] : null,
+    filters.query.trim() ? `“${filters.query.trim()}”` : null,
+  ].filter((label): label is string => Boolean(label));
 
   useEffect(() => {
     if (!searchMode) return;
     const node = sentinelRef.current;
-    if (!node || !hasNextPage || isFetchingNextPage) return;
+    // Never page while a new filter is still settling: the sentinel belongs to
+    // the previous result set until the replacement page arrives.
+    if (!node || !hasNextPage || isFetchingNextPage || query.isFetching) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -123,16 +135,18 @@ export function CatalogExplorer({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [searchMode, hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [searchMode, hasNextPage, isFetchingNextPage, query.isFetching, fetchNextPage]);
 
   const clearQuery = () => onChange({ query: "" });
 
   const summary = searchMode
     ? isBusy
       ? "Updating results…"
-      : total > 0
-        ? `${total.toLocaleString("en-US")} games match your filters`
-        : "Searching the live catalog"
+      : query.isPending
+        ? "Searching the live catalog"
+        : total > 0
+          ? `${total.toLocaleString("en-US")} games match your filters`
+          : "No games match the current filters"
     : "Search titles, studios and genres across the whole catalog";
 
   const hasActiveFilters =
@@ -279,7 +293,7 @@ export function CatalogExplorer({
       </div>
 
       {searchMode ? (
-        <div id="catalog-results" className="scroll-mt-24 space-y-5">
+        <div id="catalog-results" aria-busy={isBusy} className="scroll-mt-24 space-y-5">
           <div className="flex flex-wrap items-end justify-between gap-2">
             <div className="flex items-center gap-3">
               <span className="flex size-9 items-center justify-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
@@ -300,7 +314,11 @@ export function CatalogExplorer({
                 <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
                   {query.isPending
                     ? "Loading games…"
-                    : `${games.length} of ${total.toLocaleString("en-US")} titles loaded`}
+                    : isError
+                      ? "The catalog request failed"
+                      : total === 0
+                        ? "No titles found"
+                        : `${games.length} of ${total.toLocaleString("en-US")} titles loaded`}
                 </p>
               </div>
             </div>
@@ -309,24 +327,41 @@ export function CatalogExplorer({
             </Badge>
           </div>
 
-          {query.isPending ? (
+          {query.isPending || (!isError && isBusy && games.length === 0) ? (
             <ResultsSkeleton />
           ) : isError ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center">
-              <p className="font-display text-base font-semibold">Couldn&apos;t reach the catalog</p>
-              <p className="max-w-md text-sm text-muted-foreground">
-                The games service did not respond. Check your connection and try again.
+            <div
+              role="alert"
+              className="flex flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
+            >
+              <p className="font-display text-base font-semibold">
+                {isInvalidFilter ? "That filter isn’t supported" : "Couldn’t reach the catalog"}
               </p>
-              <Button variant="secondary" onClick={() => void refetch()}>
-                <RefreshCw aria-hidden="true" />
-                Try again
-              </Button>
+              <p className="max-w-md text-sm text-muted-foreground">
+                {isInvalidFilter
+                  ? "Pick another platform, or reset the filters to see the full catalog."
+                  : "The live games database did not respond. Check your connection and try again."}
+              </p>
+              {isInvalidFilter ? (
+                <Button variant="secondary" onClick={onReset}>
+                  Reset filters
+                </Button>
+              ) : (
+                <Button variant="secondary" onClick={() => void refetch()}>
+                  <RefreshCw aria-hidden="true" />
+                  Try again
+                </Button>
+              )}
             </div>
           ) : games.length === 0 ? (
             <EmptyState
               icon={SearchX}
-              title="No games match that search"
-              description="Try a different title, or clear the platform and category filters."
+              title="No games match these filters"
+              description={
+                activeFilterLabels.length > 0
+                  ? `Nothing in the catalog matched ${activeFilterLabels.join(" · ")}. Remove a filter or try another title.`
+                  : "The catalog returned no titles. Try a different search."
+              }
               action={
                 <Button variant="secondary" onClick={onReset}>
                   Reset filters

@@ -1,4 +1,5 @@
-const RAWG_BASE_URL = "https://api.rawg.io/api";
+const RAWG_BASE_URL =
+  process.env.RAWG_API_BASE_URL?.trim().replace(/\/+$/, "") || "https://api.rawg.io/api";
 const RAWG_REVALIDATE_SECONDS = 60 * 60;
 const RAWG_TIMEOUT_MS = 10_000;
 

@@ -47,7 +47,14 @@ export async function GET(request: NextRequest) {
   const parsed = querySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));
 
   if (!parsed.success) {
-    return jsonError("Invalid catalog query parameters.", 400, { code: "INVALID_QUERY" });
+    const field = parsed.error.issues[0]?.path[0];
+    const message =
+      field === "platform"
+        ? "Unsupported platform filter. Use one of: pc, playstation, xbox, switch, android, ios, cloud."
+        : field === "genre"
+          ? "Unsupported genre filter."
+          : "Invalid catalog query parameters.";
+    return jsonError(message, 400, { code: "INVALID_QUERY" });
   }
 
   const { search, platform, genre, page, pageSize } = parsed.data;

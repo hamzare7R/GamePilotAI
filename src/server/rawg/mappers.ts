@@ -44,14 +44,19 @@ const platformRules: { match: RegExp; platform: GamePlatform }[] = [
   { match: /pc|mac|linux/i, platform: "pc" },
 ];
 
-const platformBySlug: Record<GamePlatform, string> = {
-  pc: "pc",
-  playstation: "playstation4,playstation5",
-  xbox: "xbox-one,xbox-series-x",
-  switch: "nintendo-switch",
-  android: "android",
-  ios: "ios",
-  cloud: "web",
+/**
+ * RAWG's `platforms` filter accepts numeric platform IDs only. Sending slugs
+ * (for example `android`) is not a valid filter and makes RAWG return an empty
+ * page. IDs are taken from RAWG's own platform catalog.
+ */
+const platformIdsByPlatform: Record<GamePlatform, readonly number[]> = {
+  pc: [4],
+  playstation: [18, 187],
+  xbox: [1, 186],
+  switch: [7],
+  android: [21],
+  ios: [3],
+  cloud: [171],
 };
 
 const genreFilterByGenre: Record<GameGenre, { param: "genres" | "tags"; slug: string } | null> = {
@@ -74,7 +79,7 @@ const genreFilterByGenre: Record<GameGenre, { param: "genres" | "tags"; slug: st
 };
 
 export function rawgPlatformFilter(platform: GamePlatform) {
-  return platformBySlug[platform];
+  return platformIdsByPlatform[platform].join(",");
 }
 
 export function rawgGenreFilter(genre: GameGenre) {

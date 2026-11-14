@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
+import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
 import { catalogQueryService } from "@/services/catalog-query.service";
 import type { CatalogQueryParams } from "@/types/catalog";
@@ -17,5 +18,7 @@ export function useCatalogSearch(params: CatalogQueryParams, enabled: boolean) {
     enabled,
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
+    retry: (failureCount, error) =>
+      error instanceof ApiError && error.status === 400 ? false : failureCount < 2,
   });
 }
