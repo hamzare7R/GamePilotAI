@@ -21,7 +21,7 @@ function assertWritable() {
 
   if (isServerless || (isProduction && !explicitFile)) {
     throw new CustomGameStoreUnavailableError(
-      "Custom game storage is not configured. Set DATABASE_URL to a Postgres database.",
+      "Custom game storage is not configured. Set DATABASE_URL (or POSTGRES_URL) to a Postgres database.",
     );
   }
 }

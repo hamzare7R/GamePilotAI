@@ -16,6 +16,17 @@ export class CustomGameStoreUnavailableError extends Error {
   }
 }
 
+/**
+ * Safe, log-friendly summary of a store failure. Never includes connection
+ * strings or other credentials that may be embedded in driver errors.
+ */
+export function describeStoreError(error: unknown): string {
+  if (error instanceof CustomGameStoreUnavailableError) return error.message;
+  const code = (error as { code?: unknown }).code;
+  if (typeof code === "string" && code) return `database error ${code}`;
+  return error instanceof Error ? error.name : "unknown error";
+}
+
 export class DuplicateCustomGameError extends Error {
   readonly field: "name" | "slug";
   readonly source: "custom" | "rawg";

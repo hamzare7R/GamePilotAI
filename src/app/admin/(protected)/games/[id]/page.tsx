@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { customGameStatusLabels } from "@/types/custom-game";
 import { getCustomGameForAdmin } from "@/server/custom-games/service";
+import { describeStoreError } from "@/server/custom-games/types";
 
 export const metadata: Metadata = {
   title: "Edit custom game",
@@ -25,7 +26,7 @@ export default async function EditCustomGamePage({
   try {
     game = await getCustomGameForAdmin(id);
   } catch (error) {
-    console.error("[admin] failed to load custom game:", error);
+    console.error("[admin] failed to load custom game:", describeStoreError(error));
   }
 
   if (!game) notFound();

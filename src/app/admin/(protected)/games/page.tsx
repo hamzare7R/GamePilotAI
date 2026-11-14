@@ -7,6 +7,10 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listCustomGamesForAdmin } from "@/server/custom-games/service";
+import {
+  CustomGameStoreUnavailableError,
+  describeStoreError,
+} from "@/server/custom-games/types";
 import type { CustomGame, CustomGameStatus, CustomGameStatusFilter } from "@/types/custom-game";
 
 export const metadata: Metadata = {
@@ -44,7 +48,10 @@ export default async function AdminGamesPage({
     games = await listCustomGamesForAdmin({ search: query, status });
   } catch (error) {
     loadError =
-      error instanceof Error ? error.message : "The custom games store is unavailable.";
+      error instanceof CustomGameStoreUnavailableError
+        ? error.message
+        : "The custom games store is temporarily unavailable. Check the server logs for details.";
+    console.error("[custom-games] admin page failed:", describeStoreError(error));
   }
 
   return (

@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { requireAdmin } from "@/server/auth/admin";
 import { createCustomGame, listCustomGamesForAdmin } from "@/server/custom-games/service";
-import { CustomGameStoreUnavailableError, DuplicateCustomGameError } from "@/server/custom-games/types";
+import {
+  CustomGameStoreUnavailableError,
+  DuplicateCustomGameError,
+  describeStoreError,
+} from "@/server/custom-games/types";
 import { customGameInputSchema } from "@/lib/custom-game-schema";
 import { jsonError } from "@/server/http";
 
@@ -15,7 +19,7 @@ function storeError(error: unknown) {
   if (error instanceof CustomGameStoreUnavailableError) {
     return jsonError(error.message, 503, { code: "CUSTOM_STORE_UNAVAILABLE" });
   }
-  console.error("[custom-games] admin request failed:", error);
+  console.error("[custom-games] admin request failed:", describeStoreError(error));
   return jsonError("The custom games store is temporarily unavailable.", 500, {
     code: "CUSTOM_STORE_ERROR",
   });

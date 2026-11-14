@@ -3,7 +3,11 @@ import { Pool } from "pg";
 import type { CustomGame } from "@/types/custom-game";
 
 import { freeFireSeed } from "./seed";
-import type { CustomGameRepository } from "./types";
+import {
+  CustomGameStoreUnavailableError,
+  describeStoreError,
+  type CustomGameRepository,
+} from "./types";
 
 type CustomGameRow = {
   id: string;
@@ -77,28 +81,95 @@ function toCustomGame(row: CustomGameRow): CustomGame {
   };
 }
 
-const globalPool = globalThis as typeof globalThis & { __gamepilotPgPool?: Pool };
+type PoolState = {
+  url: string;
+  pool: Pool;
+  ready: Promise<void> | null;
+};
 
-function getPool() {
-  if (!globalPool.__gamepilotPgPool) {
-    globalPool.__gamepilotPgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 5,
-      idleTimeoutMillis: 30_000,
-    });
-  }
-  return globalPool.__gamepilotPgPool;
+const globalStore = globalThis as typeof globalThis & {
+  __gamepilotPg?: PoolState;
+};
+
+function getState(url: string): PoolState {
+  const existing = globalStore.__gamepilotPg;
+  if (existing?.url === url) return existing;
+
+  if (existing) void existing.pool.end().catch(() => undefined);
+
+  const pool = new Pool({
+    connectionString: url,
+    max: 5,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 10_000,
+    application_name: "gamepilot-ai",
+  });
+  pool.on("error", (error) => {
+    // Idle clients can error outside a query; log a sanitized summary so an
+    // unhandled 'error' event cannot crash the serverless function.
+    console.error("[custom-games] idle Postgres client error:", describeStoreError(error));
+  });
+
+  const state: PoolState = { url, pool, ready: null };
+  globalStore.__gamepilotPg = state;
+  return state;
 }
 
-let ready: Promise<void> | null = null;
+/**
+ * Maps driver failures to actionable messages. The original error is only
+ * logged through `describeStoreError`, which strips connection details.
+ */
+function translateConnectionError(error: unknown): unknown {
+  if (error instanceof CustomGameStoreUnavailableError) return error;
 
-async function ensureReady() {
-  if (!ready) {
-    ready = (async () => {
-      const pool = getPool();
-      await pool.query(CREATE_TABLE);
+  const code = (error as { code?: unknown }).code;
+  const message = error instanceof Error ? error.message : "";
+
+  if (code === "ENOTFOUND" || code === "EAI_AGAIN") {
+    return new CustomGameStoreUnavailableError(
+      "The database host could not be resolved. Verify the host in DATABASE_URL (or POSTGRES_URL).",
+    );
+  }
+  if (code === "ECONNREFUSED") {
+    return new CustomGameStoreUnavailableError(
+      "The database refused the connection. Verify the host, port and that the database accepts external connections.",
+    );
+  }
+  if (
+    code === "ETIMEDOUT" ||
+    code === "ECONNRESET" ||
+    code === "57P01" ||
+    /timeout/i.test(message)
+  ) {
+    return new CustomGameStoreUnavailableError(
+      "The database connection timed out. Check the database status and network access.",
+    );
+  }
+  if (code === "28P01" || code === "28000") {
+    return new CustomGameStoreUnavailableError(
+      "The database rejected the credentials. Verify the username and password in the connection string.",
+    );
+  }
+  if (code === "3D000") {
+    return new CustomGameStoreUnavailableError(
+      "The database named in the connection string does not exist.",
+    );
+  }
+  if (typeof code === "string" && code.startsWith("28")) {
+    return new CustomGameStoreUnavailableError(
+      "The database rejected the connection. Verify the credentials and SSL settings.",
+    );
+  }
+
+  return error;
+}
+
+async function ensureReady(state: PoolState) {
+  if (!state.ready) {
+    state.ready = (async () => {
+      await state.pool.query(CREATE_TABLE);
       const seed = freeFireSeed();
-      await pool.query(
+      await state.pool.query(
         `INSERT INTO custom_games (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
          ON CONFLICT (id) DO NOTHING`,
         [
@@ -123,105 +194,121 @@ async function ensureReady() {
         ],
       );
     })().catch((error) => {
-      ready = null;
+      state.ready = null;
       throw error;
     });
   }
 
-  return ready;
+  return state.ready;
 }
 
-export const postgresCustomGameRepository: CustomGameRepository = {
-  async list() {
-    await ensureReady();
-    const result = await getPool().query<CustomGameRow>(
-      `SELECT ${COLUMNS} FROM custom_games ORDER BY created_at DESC`,
-    );
-    return result.rows.map(toCustomGame);
-  },
+async function run<T>(url: string, query: (pool: Pool) => Promise<T>): Promise<T> {
+  const state = getState(url);
+  try {
+    await ensureReady(state);
+    return await query(state.pool);
+  } catch (error) {
+    throw translateConnectionError(error);
+  }
+}
 
-  async find(id) {
-    await ensureReady();
-    const result = await getPool().query<CustomGameRow>(
-      `SELECT ${COLUMNS} FROM custom_games WHERE id = $1 LIMIT 1`,
-      [id],
-    );
-    return result.rows[0] ? toCustomGame(result.rows[0]) : null;
-  },
+export function createPostgresCustomGameRepository(url: string): CustomGameRepository {
+  return {
+    async list() {
+      const result = await run(url, (pool) =>
+        pool.query<CustomGameRow>(`SELECT ${COLUMNS} FROM custom_games ORDER BY created_at DESC`),
+      );
+      return result.rows.map(toCustomGame);
+    },
 
-  async findBySlug(slug) {
-    await ensureReady();
-    const result = await getPool().query<CustomGameRow>(
-      `SELECT ${COLUMNS} FROM custom_games WHERE slug = $1 LIMIT 1`,
-      [slug],
-    );
-    return result.rows[0] ? toCustomGame(result.rows[0]) : null;
-  },
+    async find(id) {
+      const result = await run(url, (pool) =>
+        pool.query<CustomGameRow>(
+          `SELECT ${COLUMNS} FROM custom_games WHERE id = $1 LIMIT 1`,
+          [id],
+        ),
+      );
+      return result.rows[0] ? toCustomGame(result.rows[0]) : null;
+    },
 
-  async insert(game) {
-    await ensureReady();
-    const result = await getPool().query<CustomGameRow>(
-      `INSERT INTO custom_games (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-       RETURNING ${COLUMNS}`,
-      [
-        game.id,
-        game.name,
-        game.slug,
-        game.description,
-        game.coverUrl,
-        game.heroUrl,
-        game.developer,
-        game.publisher,
-        game.releaseDate ?? null,
-        game.rating ?? null,
-        game.genres,
-        game.platforms,
-        game.websiteUrl,
-        game.trailerUrl,
-        game.screenshots,
-        game.status,
-        game.createdAt,
-        game.updatedAt,
-      ],
-    );
-    return toCustomGame(result.rows[0]);
-  },
+    async findBySlug(slug) {
+      const result = await run(url, (pool) =>
+        pool.query<CustomGameRow>(
+          `SELECT ${COLUMNS} FROM custom_games WHERE slug = $1 LIMIT 1`,
+          [slug],
+        ),
+      );
+      return result.rows[0] ? toCustomGame(result.rows[0]) : null;
+    },
 
-  async update(id, next) {
-    await ensureReady();
-    const result = await getPool().query<CustomGameRow>(
-      `UPDATE custom_games SET
-         name = $2, slug = $3, description = $4, cover_url = $5, hero_url = $6,
-         developer = $7, publisher = $8, release_date = $9, rating = $10,
-         genres = $11, platforms = $12, website_url = $13, trailer_url = $14,
-         screenshots = $15, status = $16, updated_at = now()
-       WHERE id = $1
-       RETURNING ${COLUMNS}`,
-      [
-        id,
-        next.name,
-        next.slug,
-        next.description,
-        next.coverUrl,
-        next.heroUrl,
-        next.developer,
-        next.publisher,
-        next.releaseDate ?? null,
-        next.rating ?? null,
-        next.genres,
-        next.platforms,
-        next.websiteUrl,
-        next.trailerUrl,
-        next.screenshots,
-        next.status,
-      ],
-    );
-    return result.rows[0] ? toCustomGame(result.rows[0]) : null;
-  },
+    async insert(game) {
+      const result = await run(url, (pool) =>
+        pool.query<CustomGameRow>(
+          `INSERT INTO custom_games (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+           RETURNING ${COLUMNS}`,
+          [
+            game.id,
+            game.name,
+            game.slug,
+            game.description,
+            game.coverUrl,
+            game.heroUrl,
+            game.developer,
+            game.publisher,
+            game.releaseDate ?? null,
+            game.rating ?? null,
+            game.genres,
+            game.platforms,
+            game.websiteUrl,
+            game.trailerUrl,
+            game.screenshots,
+            game.status,
+            game.createdAt,
+            game.updatedAt,
+          ],
+        ),
+      );
+      return toCustomGame(result.rows[0]);
+    },
 
-  async remove(id) {
-    await ensureReady();
-    const result = await getPool().query(`DELETE FROM custom_games WHERE id = $1`, [id]);
-    return (result.rowCount ?? 0) > 0;
-  },
-};
+    async update(id, next) {
+      const result = await run(url, (pool) =>
+        pool.query<CustomGameRow>(
+          `UPDATE custom_games SET
+             name = $2, slug = $3, description = $4, cover_url = $5, hero_url = $6,
+             developer = $7, publisher = $8, release_date = $9, rating = $10,
+             genres = $11, platforms = $12, website_url = $13, trailer_url = $14,
+             screenshots = $15, status = $16, updated_at = now()
+           WHERE id = $1
+           RETURNING ${COLUMNS}`,
+          [
+            id,
+            next.name,
+            next.slug,
+            next.description,
+            next.coverUrl,
+            next.heroUrl,
+            next.developer,
+            next.publisher,
+            next.releaseDate ?? null,
+            next.rating ?? null,
+            next.genres,
+            next.platforms,
+            next.websiteUrl,
+            next.trailerUrl,
+            next.screenshots,
+            next.status,
+          ],
+        ),
+      );
+      return result.rows[0] ? toCustomGame(result.rows[0]) : null;
+    },
+
+    async remove(id) {
+      const result = await run(url, (pool) =>
+        pool.query(`DELETE FROM custom_games WHERE id = $1`, [id]),
+      );
+      return (result.rowCount ?? 0) > 0;
+    },
+  };
+}

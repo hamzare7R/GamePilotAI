@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { listPublishedCustomEntries } from "@/server/custom-games/service";
+import { describeStoreError } from "@/server/custom-games/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,7 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.warn(
-      "[custom-games] public list unavailable:",
-      error instanceof Error ? error.message : error,
-    );
+    console.warn("[custom-games] public list unavailable:", describeStoreError(error));
     return NextResponse.json(
       {
         error: {

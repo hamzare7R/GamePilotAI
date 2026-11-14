@@ -7,7 +7,11 @@ import {
   getCustomGameForAdmin,
   updateCustomGame,
 } from "@/server/custom-games/service";
-import { CustomGameStoreUnavailableError, DuplicateCustomGameError } from "@/server/custom-games/types";
+import {
+  CustomGameStoreUnavailableError,
+  DuplicateCustomGameError,
+  describeStoreError,
+} from "@/server/custom-games/types";
 import { jsonError } from "@/server/http";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +22,7 @@ function storeError(error: unknown) {
   if (error instanceof CustomGameStoreUnavailableError) {
     return jsonError(error.message, 503, { code: "CUSTOM_STORE_UNAVAILABLE" });
   }
-  console.error("[custom-games] admin request failed:", error);
+  console.error("[custom-games] admin request failed:", describeStoreError(error));
   return jsonError("The custom games store is temporarily unavailable.", 500, {
     code: "CUSTOM_STORE_ERROR",
   });

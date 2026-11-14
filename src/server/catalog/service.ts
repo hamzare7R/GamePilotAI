@@ -13,6 +13,7 @@ import {
   getPublishedCustomGame,
   listPublishedCustomEntries,
 } from "../custom-games/service";
+import { describeStoreError } from "../custom-games/types";
 import { isRawgConfigured, RawgError, rawgFetch } from "../rawg/client";
 import {
   mapRawgDetail,
@@ -121,7 +122,7 @@ async function safeCustomEntries(params: CatalogQueryParams): Promise<GameCatalo
   } catch (error) {
     console.warn(
       "[catalog] custom games unavailable, serving RAWG only:",
-      error instanceof Error ? error.message : error,
+      describeStoreError(error),
     );
     return [];
   }
