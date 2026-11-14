@@ -43,3 +43,6 @@ next-env.d.ts
 # local tooling artifacts
 .chrome-*
 .qoder-screens/
+
+# local custom-game store
+/.data/

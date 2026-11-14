@@ -5,6 +5,11 @@ const RAWG_TIMEOUT_MS = 10_000;
 
 export type RawgQuery = Record<string, string | number | boolean | undefined>;
 
+export type RawgFetchOptions = {
+  /** Per-request override; pass 0 for data that must not be served stale. */
+  revalidate?: number;
+};
+
 export class RawgError extends Error {
   readonly status: number;
 
@@ -23,7 +28,11 @@ export function isRawgConfigured() {
  * Server-only RAWG client. The API key never leaves the server: every browser
  * request goes through `/api/games`, never directly to rawg.io.
  */
-export async function rawgFetch<T>(path: string, query: RawgQuery = {}): Promise<T> {
+export async function rawgFetch<T>(
+  path: string,
+  query: RawgQuery = {},
+  options: RawgFetchOptions = {},
+): Promise<T> {
   const apiKey = process.env.RAWG_API_KEY?.trim();
   if (!apiKey) {
     throw new RawgError("RAWG_API_KEY is not configured", 503);
@@ -40,7 +49,7 @@ export async function rawgFetch<T>(path: string, query: RawgQuery = {}): Promise
   try {
     response = await fetch(url, {
       headers: { Accept: "application/json" },
-      next: { revalidate: RAWG_REVALIDATE_SECONDS },
+      next: { revalidate: options.revalidate ?? RAWG_REVALIDATE_SECONDS },
       signal: AbortSignal.timeout(RAWG_TIMEOUT_MS),
     });
   } catch (error) {

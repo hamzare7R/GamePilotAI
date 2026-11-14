@@ -2,7 +2,7 @@ import { CatalogNotFoundError } from "@/server/catalog/errors";
 import { getGameDetail } from "@/server/catalog/service";
 import { jsonError, jsonOk } from "@/server/http";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const GAME_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/i;
 
@@ -17,9 +17,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const result = await getGameDetail(id);
 
     return jsonOk(result, {
-      headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-      },
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (error) {
     if (error instanceof CatalogNotFoundError) {

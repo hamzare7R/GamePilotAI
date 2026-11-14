@@ -4,7 +4,7 @@ import { z } from "zod";
 import { listCatalog } from "@/server/catalog/service";
 import { jsonError, jsonOk } from "@/server/http";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const platformSchema = z.enum([
   "pc",
@@ -70,7 +70,9 @@ export async function GET(request: NextRequest) {
 
     return jsonOk(result, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        // Custom entries can be published or unpublished at any time, so the
+        // merged response must not be cached by a CDN.
+        "Cache-Control": "no-store",
       },
     });
   } catch {

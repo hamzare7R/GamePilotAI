@@ -13,6 +13,7 @@ import {
 
 import { CatalogExplorer } from "@/components/games/catalog-explorer";
 import { CategoryBrowser } from "@/components/games/category-browser";
+import { CustomGamesRail } from "@/components/games/custom-games-rail";
 import { FeaturedGameHero } from "@/components/games/featured-game-hero";
 import { GameDetailDialog } from "@/components/games/game-detail-dialog";
 import { GameGrid } from "@/components/games/game-grid";
@@ -182,6 +183,8 @@ export function GamesDiscovery({ sections }: GamesDiscoveryProps) {
 
         {!searchMode ? (
           <div className="space-y-8">
+            <CustomGamesRail onOpen={handleOpen} />
+
             {trending.length > 0 ? (
               <GameGrid
                 id="trending"

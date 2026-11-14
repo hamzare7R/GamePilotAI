@@ -16,6 +16,8 @@ export type GameCatalogEntry = Omit<Game, "coverUrl"> & {
   featured?: boolean;
   trendingRank?: number;
   playersOnline?: number;
+  /** Per-game provenance so the UI can flag owner-authored entries. */
+  source?: CatalogSource;
 };
 
 export type PlatformFilter = GamePlatform | "all";
@@ -33,8 +35,8 @@ export const emptyCatalogFilters: CatalogFilters = {
   genre: "all",
 };
 
-/** Where a catalog response came from: the live RAWG database or the bundled demo set. */
-export type CatalogSource = "rawg" | "mock";
+/** Where a catalog entry/response came from: RAWG, the bundled demo set, or the owner. */
+export type CatalogSource = "rawg" | "mock" | "custom";
 
 export type CatalogQueryParams = {
   search?: string;

@@ -1,5 +1,6 @@
 import { catalogGames } from "@/data/games";
 import { filterGames } from "@/lib/catalog";
+import { normalizeGameTitle } from "@/lib/custom-game";
 import type {
   CatalogPage,
   CatalogQueryParams,
@@ -22,16 +23,32 @@ function sortByPopularity(games: readonly GameCatalogEntry[]) {
   });
 }
 
-export function mockCatalogPage(params: CatalogQueryParams): CatalogPage {
+function withSource(game: GameCatalogEntry): GameCatalogEntry {
+  return game.source ? game : { ...game, source: "mock" };
+}
+
+export function mockCatalogPage(
+  params: CatalogQueryParams,
+  extraGames: readonly GameCatalogEntry[] = [],
+): CatalogPage {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.min(40, Math.max(1, params.pageSize ?? 20));
 
-  const filtered = filterGames(catalogGames, {
+  const filters = {
     query: params.search?.trim() ?? "",
     platform: params.platform ?? "all",
     genre: params.genre ?? "all",
-  });
-  const sorted = sortByPopularity(filtered);
+  } as const;
+
+  // Owner-authored games lead the demo catalog so a new entry is visible right away.
+  const customGames = filterGames(extraGames, filters);
+  const customTitles = new Set(
+    customGames.map((game) => normalizeGameTitle(game.title)),
+  );
+  const demoGames = sortByPopularity(filterGames(catalogGames, filters)).filter(
+    (game) => !customTitles.has(normalizeGameTitle(game.title)),
+  );
+  const sorted = [...customGames, ...demoGames.map(withSource)];
   const total = sorted.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const start = (page - 1) * pageSize;
@@ -57,22 +74,28 @@ export function mockCatalogSections(): CatalogSections {
     .toISOString()
     .slice(0, 10);
 
-  const featured = catalogGames.find((game) => game.featured) ?? catalogGames[0] ?? null;
-  const trending = sortByPopularity(catalogGames.filter((game) => game.trendingRank)).slice(0, 8);
+  const featuredRaw = catalogGames.find((game) => game.featured) ?? catalogGames[0] ?? null;
+  const featured = featuredRaw ? withSource(featuredRaw) : null;
+  const trending = sortByPopularity(catalogGames.filter((game) => game.trendingRank))
+    .slice(0, 8)
+    .map(withSource);
   const popular = [...catalogGames]
     .sort((a, b) => (b.playersOnline ?? 0) - (a.playersOnline ?? 0))
-    .slice(0, 8);
+    .slice(0, 8)
+    .map(withSource);
   const upcoming = catalogGames
     .filter((game) => game.releaseDate && game.releaseDate > todayIso)
     .sort((a, b) => (a.releaseDate ?? "").localeCompare(b.releaseDate ?? ""))
-    .slice(0, 8);
+    .slice(0, 8)
+    .map(withSource);
   const recentlyReleased = catalogGames
     .filter(
       (game) =>
         game.releaseDate && game.releaseDate <= todayIso && game.releaseDate >= recentCutoff,
     )
     .sort((a, b) => (b.releaseDate ?? "").localeCompare(a.releaseDate ?? ""))
-    .slice(0, 8);
+    .slice(0, 8)
+    .map(withSource);
 
   return { featured, trending, popular, upcoming, recentlyReleased, source: "mock" };
 }
@@ -91,5 +114,5 @@ export function mockGameDetail(gameId: string): GameDetailResult {
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     .slice(0, 6);
 
-  return { game, similar, source: "mock" };
+  return { game: withSource(game), similar: similar.map(withSource), source: "mock" };
 }

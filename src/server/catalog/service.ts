@@ -1,4 +1,5 @@
 import type {
+  CatalogFilters,
   CatalogPage,
   CatalogQueryParams,
   CatalogSections,
@@ -6,6 +7,12 @@ import type {
   GameDetailResult,
 } from "@/types/catalog";
 
+import { customGameToCatalogEntry, normalizeGameTitle } from "@/lib/custom-game";
+import {
+  getCustomGameDetailEntries,
+  getPublishedCustomGame,
+  listPublishedCustomEntries,
+} from "../custom-games/service";
 import { isRawgConfigured, RawgError, rawgFetch } from "../rawg/client";
 import {
   mapRawgDetail,
@@ -20,6 +27,8 @@ import { mockCatalogPage, mockCatalogSections, mockGameDetail } from "./mock";
 const SECTION_LIMIT = 8;
 const SECTION_POOL = 18;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RAWG_PAGE_SIZE = 40;
+const CUSTOM_ID_PATTERN = /^custom-/i;
 
 function clampPage(value: number | undefined) {
   return Number.isFinite(value) ? Math.min(100, Math.max(1, Math.trunc(value as number))) : 1;
@@ -74,10 +83,11 @@ function takeUnique(
   return picked;
 }
 
-async function fetchRawgPage(params: CatalogQueryParams): Promise<CatalogPage> {
-  const page = clampPage(params.page);
-  const pageSize = clampPageSize(params.pageSize);
-
+function rawgQuery(
+  params: CatalogQueryParams,
+  page: number,
+  pageSize: number,
+): Record<string, string | number | undefined> {
   const query: Record<string, string | number | undefined> = {
     page,
     page_size: pageSize,
@@ -94,12 +104,74 @@ async function fetchRawgPage(params: CatalogQueryParams): Promise<CatalogPage> {
     if (genre) query[genre.param] = genre.slug;
   }
 
-  const response = await rawgFetch<RawgListResponse>("/games", query);
+  return query;
+}
+
+function catalogFilters(params: CatalogQueryParams): CatalogFilters {
+  return {
+    query: params.search?.trim() ?? "",
+    platform: params.platform ?? "all",
+    genre: params.genre ?? "all",
+  };
+}
+
+async function safeCustomEntries(params: CatalogQueryParams): Promise<GameCatalogEntry[]> {
+  try {
+    return await listPublishedCustomEntries(catalogFilters(params));
+  } catch (error) {
+    console.warn(
+      "[catalog] custom games unavailable, serving RAWG only:",
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
+
+/**
+ * Custom entries are prepended to the RAWG result space. RAWG's page offsets are
+ * shifted by the custom count, so the rawg page is fetched at 40 items per page
+ * and sliced, keeping pagination stable as entries are added.
+ */
+async function fetchRawgPageMerged(
+  params: CatalogQueryParams,
+  customPool: readonly GameCatalogEntry[],
+): Promise<CatalogPage> {
+  const page = clampPage(params.page);
+  const pageSize = clampPageSize(params.pageSize);
+  const start = (page - 1) * pageSize;
+  const rawgSkip = Math.max(0, start - customPool.length);
+  const rawgPage = Math.floor(rawgSkip / RAWG_PAGE_SIZE) + 1;
+
+  const response = await rawgFetch<RawgListResponse>(
+    "/games",
+    rawgQuery(params, rawgPage, RAWG_PAGE_SIZE),
+  );
+  const rawgEntries = dedupe(response.results.map(mapRawgGame));
+
+  // Safety net on top of the create-time check: hide a custom entry if RAWG
+  // already returns a title with the same normalized name.
+  const rawgTitles = new Set(rawgEntries.map((game) => normalizeGameTitle(game.title)));
+  const customs = customPool.filter(
+    (game) => !rawgTitles.has(normalizeGameTitle(game.title)),
+  );
+
+  const items: GameCatalogEntry[] = [];
+  if (start < customs.length) {
+    items.push(...customs.slice(start, start + pageSize));
+  }
+
+  const remaining = pageSize - items.length;
+  if (remaining > 0) {
+    const offset = rawgSkip - (rawgPage - 1) * RAWG_PAGE_SIZE;
+    items.push(...rawgEntries.slice(offset, offset + remaining));
+  }
+
+  const total = response.count + customs.length;
 
   return {
-    items: dedupe(response.results.map(mapRawgGame)),
+    items,
     source: "rawg",
-    pagination: buildPagination(page, pageSize, response.count, Boolean(response.next)),
+    pagination: buildPagination(page, pageSize, total, start + pageSize < total),
   };
 }
 
@@ -166,10 +238,12 @@ async function fetchRawgSections(): Promise<CatalogSections> {
 }
 
 export async function listCatalog(params: CatalogQueryParams = {}): Promise<CatalogPage> {
-  if (!isRawgConfigured()) return mockCatalogPage(params);
+  const customs = await safeCustomEntries(params);
+
+  if (!isRawgConfigured()) return mockCatalogPage(params, customs);
 
   try {
-    return await fetchRawgPage(params);
+    return await fetchRawgPageMerged(params, customs);
   } catch (error) {
     throw error instanceof RawgError
       ? new CatalogUnavailableError(error.message)
@@ -192,6 +266,26 @@ export async function getCatalogSections(): Promise<CatalogSections> {
 }
 
 export async function getGameDetail(gameId: string): Promise<GameDetailResult> {
+  if (CUSTOM_ID_PATTERN.test(gameId)) {
+    let game = null;
+    try {
+      game = await getPublishedCustomGame(gameId);
+    } catch (error) {
+      throw new CatalogUnavailableError(
+        error instanceof Error ? error.message : undefined,
+      );
+    }
+
+    if (!game) throw new CatalogNotFoundError();
+
+    const similar = await getCustomGameDetailEntries(game).catch(() => []);
+    return {
+      game: customGameToCatalogEntry(game),
+      similar,
+      source: "custom",
+    };
+  }
+
   if (!isRawgConfigured()) return mockGameDetail(gameId);
 
   try {

@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformMeta } from "@/config/catalog";
 import { useGameDetail } from "@/hooks/api/use-game-detail";
 import { formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
-import type { GameCatalogEntry } from "@/types/catalog";
+import type { GameCatalogEntry, GameDetailResult } from "@/types/catalog";
 
 type GameDetailDialogProps = {
   game: GameCatalogEntry | null;
@@ -27,6 +27,8 @@ type GameDetailDialogProps = {
   inLibrary: boolean;
   onToggleLibrary: (game: GameCatalogEntry) => void;
   onSelectGame?: (game: GameCatalogEntry) => void;
+  /** Lets the admin preview render an unpublished entry without fetching it. */
+  detailOverride?: GameDetailResult | null;
 };
 
 export function GameDetailDialog({
@@ -36,12 +38,13 @@ export function GameDetailDialog({
   inLibrary,
   onToggleLibrary,
   onSelectGame,
+  detailOverride,
 }: GameDetailDialogProps) {
-  const detailQuery = useGameDetail(game?.id, open);
-  const detail = detailQuery.data?.game ?? game;
-  const similar = detailQuery.data?.similar ?? [];
+  const detailQuery = useGameDetail(game?.id, open && !detailOverride);
+  const detail = detailOverride?.game ?? detailQuery.data?.game ?? game;
+  const similar = detailOverride?.similar ?? detailQuery.data?.similar ?? [];
   const players = formatPlayers(detail?.playersOnline);
-  const isLoadingDetail = detailQuery.isPending && Boolean(game);
+  const isLoadingDetail = !detailOverride && detailQuery.isPending && Boolean(game);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,6 +63,9 @@ export function GameDetailDialog({
               <div className="absolute inset-x-5 bottom-4 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <RatingBadge rating={detail.rating} />
+                  {detail.source === "custom" ? (
+                    <Badge variant="success">Custom entry</Badge>
+                  ) : null}
                   {isNewRelease(detail) ? <Badge variant="blue">New release</Badge> : null}
                   {detail.trendingRank ? (
                     <Badge variant="outline" className="bg-black/40">

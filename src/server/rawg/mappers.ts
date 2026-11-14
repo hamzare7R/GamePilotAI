@@ -169,6 +169,7 @@ function baseEntry(game: RawgGame): GameCatalogEntry {
     genres,
     releaseDate: validDate(game.released),
     rating: mapRating(game.rating),
+    source: "rawg",
   };
 }
 
