@@ -44,7 +44,7 @@ export function SiteFooter() {
       <div className="border-t border-border/60">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>
-            © {new Date().getFullYear()} {siteConfig.name}. Built for players, powered by AI.
+            © {new Date().getFullYear()} {siteConfig.name}. Built for players, powered by hamza7R.
           </p>
           <p className="font-mono">v0.1.0 — foundation</p>
         </div>
