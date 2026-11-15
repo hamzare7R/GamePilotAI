@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Home, Menu, Search, Settings, UserRound } from "lucide-react";
+import { Bell, ChevronDown, Home, Menu, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,7 +33,7 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppTopbar() {
+export function AppTopbar({ isOwner = false }: { isOwner?: boolean }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -155,6 +155,17 @@ export function AppTopbar() {
                 Settings
               </Link>
             </DropdownMenuItem>
+            {isOwner ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/games">
+                    <ShieldCheck />
+                    Owner Area
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/">
