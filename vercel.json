@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/gmail-watch-renewal",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}

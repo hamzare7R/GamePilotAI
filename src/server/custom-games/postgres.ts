@@ -1,11 +1,11 @@
-import { Pool } from "pg";
+import type { Pool } from "pg";
 
+import { getSharedPoolState } from "@/server/db/pool";
 import type { CustomGame } from "@/types/custom-game";
 
 import { freeFireSeed } from "./seed";
 import {
   CustomGameStoreUnavailableError,
-  describeStoreError,
   type CustomGameRepository,
 } from "./types";
 
@@ -81,38 +81,17 @@ function toCustomGame(row: CustomGameRow): CustomGame {
   };
 }
 
-type PoolState = {
+type ReadyState = {
   url: string;
-  pool: Pool;
-  ready: Promise<void> | null;
+  ready: Promise<void>;
 };
 
-const globalStore = globalThis as typeof globalThis & {
-  __gamepilotPg?: PoolState;
+const globalReady = globalThis as typeof globalThis & {
+  __gamepilotCustomGamesReady?: ReadyState;
 };
 
-function getState(url: string): PoolState {
-  const existing = globalStore.__gamepilotPg;
-  if (existing?.url === url) return existing;
-
-  if (existing) void existing.pool.end().catch(() => undefined);
-
-  const pool = new Pool({
-    connectionString: url,
-    max: 5,
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-    application_name: "gamepilot-ai",
-  });
-  pool.on("error", (error) => {
-    // Idle clients can error outside a query; log a sanitized summary so an
-    // unhandled 'error' event cannot crash the serverless function.
-    console.error("[custom-games] idle Postgres client error:", describeStoreError(error));
-  });
-
-  const state: PoolState = { url, pool, ready: null };
-  globalStore.__gamepilotPg = state;
-  return state;
+function getState(url: string) {
+  return getSharedPoolState(url);
 }
 
 /**
@@ -164,42 +143,44 @@ function translateConnectionError(error: unknown): unknown {
   return error;
 }
 
-async function ensureReady(state: PoolState) {
-  if (!state.ready) {
-    state.ready = (async () => {
-      await state.pool.query(CREATE_TABLE);
-      const seed = freeFireSeed();
-      await state.pool.query(
-        `INSERT INTO custom_games (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
-         ON CONFLICT (id) DO NOTHING`,
-        [
-          seed.id,
-          seed.name,
-          seed.slug,
-          seed.description,
-          seed.coverUrl,
-          seed.heroUrl,
-          seed.developer,
-          seed.publisher,
-          seed.releaseDate ?? null,
-          seed.rating ?? null,
-          seed.genres,
-          seed.platforms,
-          seed.websiteUrl,
-          seed.trailerUrl,
-          seed.screenshots,
-          seed.status,
-          seed.createdAt,
-          seed.updatedAt,
-        ],
-      );
-    })().catch((error) => {
-      state.ready = null;
-      throw error;
-    });
-  }
+async function ensureReady(state: { url: string; pool: Pool }) {
+  const cached = globalReady.__gamepilotCustomGamesReady;
+  if (cached?.url === state.url) return cached.ready;
 
-  return state.ready;
+  const ready = (async () => {
+    await state.pool.query(CREATE_TABLE);
+    const seed = freeFireSeed();
+    await state.pool.query(
+      `INSERT INTO custom_games (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        seed.id,
+        seed.name,
+        seed.slug,
+        seed.description,
+        seed.coverUrl,
+        seed.heroUrl,
+        seed.developer,
+        seed.publisher,
+        seed.releaseDate ?? null,
+        seed.rating ?? null,
+        seed.genres,
+        seed.platforms,
+        seed.websiteUrl,
+        seed.trailerUrl,
+        seed.screenshots,
+        seed.status,
+        seed.createdAt,
+        seed.updatedAt,
+      ],
+    );
+  })().catch((error) => {
+    globalReady.__gamepilotCustomGamesReady = undefined;
+    throw error;
+  });
+
+  globalReady.__gamepilotCustomGamesReady = { url: state.url, ready };
+  return ready;
 }
 
 async function run<T>(url: string, query: (pool: Pool) => Promise<T>): Promise<T> {

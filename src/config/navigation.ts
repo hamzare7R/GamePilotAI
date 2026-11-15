@@ -1,5 +1,6 @@
 import {
   Gamepad2,
+  Inbox,
   LayoutDashboard,
   LibraryBig,
   Settings,
@@ -41,6 +42,10 @@ export const dashboardNav: NavSection[] = [
   {
     title: "Intelligence",
     items: [{ title: "AI Coach", href: "/coach", icon: Sparkles, badge: "Beta" }],
+  },
+  {
+    title: "Integrations",
+    items: [{ title: "Mail Monitor", href: "/mail-monitor", icon: Inbox }],
   },
   {
     title: "Account",

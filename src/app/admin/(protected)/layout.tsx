@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Gamepad2 } from "lucide-react";
+import { ArrowLeft, Gamepad2, Inbox } from "lucide-react";
 
 import { AdminLogoutButton } from "@/components/admin/admin-logout-button";
 import { Logo } from "@/components/layout/logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { hasAdminSession, isAdminAuthConfigured } from "@/server/auth/admin";
+
+// Sessions are read from cookies on every request; never prerender or cache.
+export const dynamic = "force-dynamic";
 
 export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
   if (!isAdminAuthConfigured()) {
@@ -49,6 +52,12 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
             <Link href="/admin/games">
               <Gamepad2 aria-hidden="true" />
               Custom games
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/admin/mail-monitor">
+              <Inbox aria-hidden="true" />
+              Mail monitor
             </Link>
           </Button>
           <AdminLogoutButton />

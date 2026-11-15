@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bell, ChevronDown, Home, Menu, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Bell,
+  ChevronDown,
+  Home,
+  LogIn,
+  LogOut,
+  Menu,
+  Search,
+  Settings,
+  ShieldCheck,
+  UserRound,
+  UserRoundPlus,
+} from "lucide-react";
 
 import { Logo } from "@/components/layout/logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,9 +45,36 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppTopbar({ isOwner = false }: { isOwner?: boolean }) {
+export function AppTopbar({
+  isOwner = false,
+  user = null,
+}: {
+  isOwner?: boolean;
+  user?: { email: string; displayName: string } | null;
+}) {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  const accountName = user ? user.displayName || user.email.split("@")[0] : "Guest Pilot";
+  const accountMeta = user ? user.email : "Local session";
+  const initials = user
+    ? (user.displayName.trim() || user.email).slice(0, 2).toUpperCase()
+    : "GP";
+
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Clearing the client state below is still the right fallback.
+    }
+    router.push("/");
+    router.refresh();
+    setSigningOut(false);
+  }
 
   const currentItem = dashboardNav
     .flatMap((section) => section.items)
@@ -131,16 +170,16 @@ export function AppTopbar({ isOwner = false }: { isOwner?: boolean }) {
               aria-label="Account menu"
             >
               <Avatar className="size-8">
-                <AvatarFallback>GP</AvatarFallback>
+                <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
-              <span className="hidden text-sm font-medium sm:block">Guest Pilot</span>
+              <span className="hidden max-w-32 truncate text-sm font-medium sm:block">{accountName}</span>
               <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <span className="block text-sm font-medium text-foreground">Guest Pilot</span>
-              <span className="block text-xs text-muted-foreground">Local session</span>
+              <span className="block truncate text-sm font-medium text-foreground">{accountName}</span>
+              <span className="block truncate text-xs text-muted-foreground">{accountMeta}</span>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -166,6 +205,28 @@ export function AppTopbar({ isOwner = false }: { isOwner?: boolean }) {
                 </DropdownMenuItem>
               </>
             ) : null}
+            <DropdownMenuSeparator />
+            {user ? (
+              <DropdownMenuItem disabled={signingOut} onSelect={() => void handleSignOut()}>
+                <LogOut />
+                {signingOut ? "Signing out…" : "Sign out"}
+              </DropdownMenuItem>
+            ) : (
+              <>
+                <DropdownMenuItem asChild>
+                  <Link href="/login">
+                    <LogIn />
+                    Sign in
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/register">
+                    <UserRoundPlus />
+                    Create account
+                  </Link>
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <Link href="/">
