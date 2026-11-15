@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, Loader2, Save } from "lucide-react";
 
+import { ImageUrlField } from "@/components/admin/image-url-field";
+import { ScreenshotEditor } from "@/components/admin/screenshot-editor";
 import { GameDetailDialog } from "@/components/games/game-detail-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,7 @@ type FormState = {
   platforms: GamePlatform[];
   websiteUrl: string;
   trailerUrl: string;
-  screenshots: string;
+  screenshots: string[];
   status: CustomGameStatus;
 };
 
@@ -49,7 +51,7 @@ function initialState(game?: CustomGame): FormState {
     platforms: game?.platforms ?? [],
     websiteUrl: game?.websiteUrl ?? "",
     trailerUrl: game?.trailerUrl ?? "",
-    screenshots: game?.screenshots.join("\n") ?? "",
+    screenshots: game ? [...game.screenshots] : [],
     status: game?.status ?? "draft",
   };
 }
@@ -102,7 +104,7 @@ export function CustomGameForm({ mode, game }: { mode: "create" | "edit"; game?:
         platforms: form.platforms,
         websiteUrl: form.websiteUrl,
         trailerUrl: form.trailerUrl,
-        screenshots: form.screenshots.split("\n").map((line) => line.trim()).filter(Boolean),
+        screenshots: form.screenshots,
         status: form.status,
       }),
     [form, game],
@@ -128,7 +130,7 @@ export function CustomGameForm({ mode, game }: { mode: "create" | "edit"; game?:
       platforms: form.platforms,
       websiteUrl: form.websiteUrl.trim(),
       trailerUrl: form.trailerUrl.trim(),
-      screenshots: form.screenshots.split("\n").map((line) => line.trim()).filter(Boolean),
+      screenshots: form.screenshots,
       status: form.status,
     };
 
@@ -281,32 +283,36 @@ export function CustomGameForm({ mode, game }: { mode: "create" | "edit"; game?:
       <section className="space-y-4 rounded-xl border border-border/70 bg-card/40 p-4 sm:p-5">
         <h2 className="font-display text-sm font-semibold tracking-wide">Media & links</h2>
         <p className="text-xs text-muted-foreground">
-          Paste existing https:// URLs. No URLs are generated for you — empty fields fall back to the
-          shared placeholder art.
+          Paste direct https:// image URLs from anywhere on the web. Previews load immediately; if a
+          host blocks external embedding, the storefront falls back to the GamePilot placeholder art.
+          No image URLs are generated for you.
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="game-cover">Cover image URL</Label>
-            <Input
-              id="game-cover"
-              value={form.coverUrl}
-              onChange={(event) => update("coverUrl", event.target.value)}
-              placeholder="https://…"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="game-hero">Background image URL</Label>
-            <Input
-              id="game-hero"
-              value={form.heroUrl}
-              onChange={(event) => update("heroUrl", event.target.value)}
-              placeholder="https://…"
-            />
-          </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <ImageUrlField
+            id="game-cover"
+            label="Cover image URL"
+            value={form.coverUrl}
+            onChange={(value) => update("coverUrl", value)}
+            aspect="cover"
+            help="Portrait artwork (3:4). JPG, PNG, WEBP or GIF over https."
+          />
+          <ImageUrlField
+            id="game-hero"
+            label="Background image URL"
+            value={form.heroUrl}
+            onChange={(value) => update("heroUrl", value)}
+            aspect="wide"
+            help="Wide key art (16:9) used in the details header. Falls back to the cover."
+          />
+        </div>
+
+        <div className="grid gap-4 pt-1 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="game-website">Game website</Label>
             <Input
               id="game-website"
+              type="url"
               value={form.websiteUrl}
               onChange={(event) => update("websiteUrl", event.target.value)}
               placeholder="https://…"
@@ -316,21 +322,19 @@ export function CustomGameForm({ mode, game }: { mode: "create" | "edit"; game?:
             <Label htmlFor="game-trailer">Trailer URL</Label>
             <Input
               id="game-trailer"
+              type="url"
               value={form.trailerUrl}
               onChange={(event) => update("trailerUrl", event.target.value)}
               placeholder="https://…"
             />
           </div>
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="game-screenshots">Screenshots (one URL per line)</Label>
-            <Textarea
-              id="game-screenshots"
-              value={form.screenshots}
-              onChange={(event) => update("screenshots", event.target.value)}
-              rows={3}
-              placeholder="https://…"
-            />
-          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <ScreenshotEditor
+            value={form.screenshots}
+            onChange={(value) => update("screenshots", value)}
+          />
         </div>
       </section>
 

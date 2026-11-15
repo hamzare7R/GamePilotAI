@@ -3,6 +3,7 @@ import type { GameCatalogEntry } from "@/types/catalog";
 import type { CustomGame } from "@/types/custom-game";
 
 export const CUSTOM_PLACEHOLDER_COVER = "/games/placeholder-cover.svg";
+export const CUSTOM_PLACEHOLDER_HERO = "/games/placeholder-hero.svg";
 
 const TAGLINE_MAX = 130;
 
@@ -43,6 +44,7 @@ export function customGameToCatalogEntry(game: CustomGame): GameCatalogEntry {
     title: game.name,
     coverUrl: game.coverUrl || CUSTOM_PLACEHOLDER_COVER,
     heroUrl: game.heroUrl || undefined,
+    screenshots: game.screenshots.length > 0 ? [...game.screenshots] : undefined,
     tagline: firstSentence(description) || genreTagline,
     description,
     developer: game.developer,

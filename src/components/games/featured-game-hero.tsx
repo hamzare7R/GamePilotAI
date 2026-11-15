@@ -1,10 +1,11 @@
-import Image from "next/image";
 import { Check, Info, Plus, Sparkles, Star, Users } from "lucide-react";
 
 import { PlatformStack } from "@/components/games/platform-stack";
+import { GameImage } from "@/components/media/game-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPlayers, formatReleaseDate } from "@/lib/catalog";
+import { CUSTOM_PLACEHOLDER_HERO } from "@/lib/custom-game";
 import type { GameCatalogEntry } from "@/types/catalog";
 
 type FeaturedGameHeroProps = {
@@ -27,10 +28,10 @@ export function FeaturedGameHero({
       aria-labelledby="featured-game-title"
       className="relative isolate overflow-hidden rounded-2xl border border-white/10 bg-card shadow-[0_0_90px_-45px_rgb(168_85_247/0.75)]"
     >
-      <Image
+      <GameImage
         src={game.heroUrl ?? game.coverUrl}
         alt={`${game.title} key art`}
-        fill
+        fallbackSrc={CUSTOM_PLACEHOLDER_HERO}
         priority
         sizes="(min-width: 1280px) 1216px, 100vw"
         className="object-cover object-center"

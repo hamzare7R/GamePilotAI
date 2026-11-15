@@ -13,6 +13,8 @@ export type GameCatalogEntry = Omit<Game, "coverUrl"> & {
   developer: string;
   publisher: string;
   heroUrl?: string;
+  /** Owner-authored screenshot URLs, rendered in the details dialog. */
+  screenshots?: string[];
   featured?: boolean;
   trendingRank?: number;
   playersOnline?: number;

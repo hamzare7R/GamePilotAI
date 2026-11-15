@@ -1,15 +1,28 @@
 import { z } from "zod";
 
+import {
+  MAX_IMAGE_URL_LENGTH,
+  MAX_SCREENSHOTS,
+  validateImageUrl,
+  validateLinkUrl,
+  type UrlCheck,
+} from "@/lib/image-url";
+
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const assetUrl = z
-  .string()
-  .trim()
-  .max(600)
-  .refine(
-    (value) => value === "" || /^https?:\/\//i.test(value) || value.startsWith("/"),
-    "Use an https:// URL or a site-relative path.",
-  );
+function urlField(check: (value: string) => UrlCheck, label: string) {
+  return z
+    .string()
+    .trim()
+    .max(MAX_IMAGE_URL_LENGTH)
+    .superRefine((value, ctx) => {
+      const result = check(value);
+      if (!result.ok) ctx.addIssue({ code: "custom", message: `${label}: ${result.message}` });
+    });
+}
+
+const imageUrl = urlField(validateImageUrl, "Image");
+const linkUrl = urlField(validateLinkUrl, "Link");
 
 const plainText = (max: number) => z.string().trim().max(max);
 
@@ -54,8 +67,8 @@ export const customGameInputSchema = z.object({
     .optional()
     .or(z.literal("")),
   description: plainText(6000).default(""),
-  coverUrl: assetUrl.default(""),
-  heroUrl: assetUrl.default(""),
+  coverUrl: imageUrl.default(""),
+  heroUrl: imageUrl.default(""),
   developer: plainText(120).default(""),
   publisher: plainText(120).default(""),
   releaseDate: z
@@ -67,9 +80,12 @@ export const customGameInputSchema = z.object({
   rating: z.number().min(0).max(10).optional(),
   genres: z.array(genreSchema).max(8).default([]),
   platforms: z.array(platformSchema).min(1, "Pick at least one platform.").max(7),
-  websiteUrl: assetUrl.default(""),
-  trailerUrl: assetUrl.default(""),
-  screenshots: z.array(assetUrl).max(12).default([]),
+  websiteUrl: linkUrl.default(""),
+  trailerUrl: linkUrl.default(""),
+  screenshots: z
+    .array(imageUrl)
+    .max(MAX_SCREENSHOTS, `Up to ${MAX_SCREENSHOTS} screenshots.`)
+    .default([]),
   status: customGameStatusSchema.default("draft"),
 });
 
@@ -89,8 +105,8 @@ export const customGameUpdateSchema = z
       .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Lowercase letters, numbers and dashes only.")
       .optional(),
     description: plainText(6000).optional(),
-    coverUrl: assetUrl.optional(),
-    heroUrl: assetUrl.optional(),
+    coverUrl: imageUrl.optional(),
+    heroUrl: imageUrl.optional(),
     developer: plainText(120).optional(),
     publisher: plainText(120).optional(),
     releaseDate: z
@@ -101,9 +117,12 @@ export const customGameUpdateSchema = z
     rating: z.number().min(0).max(10).optional(),
     genres: z.array(genreSchema).max(8).optional(),
     platforms: z.array(platformSchema).min(1, "Pick at least one platform.").max(7).optional(),
-    websiteUrl: assetUrl.optional(),
-    trailerUrl: assetUrl.optional(),
-    screenshots: z.array(assetUrl).max(12).optional(),
+    websiteUrl: linkUrl.optional(),
+    trailerUrl: linkUrl.optional(),
+    screenshots: z
+      .array(imageUrl)
+      .max(MAX_SCREENSHOTS, `Up to ${MAX_SCREENSHOTS} screenshots.`)
+      .optional(),
     status: customGameStatusSchema.optional(),
   })
   .strict();

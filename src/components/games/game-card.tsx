@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { Play } from "lucide-react";
 
 import { PlatformStack } from "@/components/games/platform-stack";
+import { GameImage } from "@/components/media/game-image";
 import { RatingBadge } from "@/components/games/rating-badge";
 import { Badge } from "@/components/ui/badge";
 import { describeGameTags, formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
@@ -30,10 +30,9 @@ export function GameCard({ game, onOpen, showReleaseDate, className }: GameCardP
       )}
     >
       <div className="relative aspect-3/4 overflow-hidden">
-        <Image
+        <GameImage
           src={game.coverUrl}
           alt={`${game.title} cover art`}
-          fill
           sizes="(min-width: 768px) 24vw, 46vw"
           className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
         />

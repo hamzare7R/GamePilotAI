@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Check, Loader2, Plus, RefreshCw } from "lucide-react";
 
 import { RatingBadge } from "@/components/games/rating-badge";
+import { GameImage } from "@/components/media/game-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformMeta } from "@/config/catalog";
 import { useGameDetail } from "@/hooks/api/use-game-detail";
 import { formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
+import { CUSTOM_PLACEHOLDER_HERO } from "@/lib/custom-game";
+import { isRenderableImageUrl } from "@/lib/image-url";
 import type { GameCatalogEntry, GameDetailResult } from "@/types/catalog";
 
 type GameDetailDialogProps = {
@@ -45,6 +47,7 @@ export function GameDetailDialog({
   const similar = detailOverride?.similar ?? detailQuery.data?.similar ?? [];
   const players = formatPlayers(detail?.playersOnline);
   const isLoadingDetail = !detailOverride && detailQuery.isPending && Boolean(game);
+  const screenshots = (detail?.screenshots ?? []).filter(isRenderableImageUrl);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -52,10 +55,10 @@ export function GameDetailDialog({
         {detail ? (
           <>
             <div className="relative h-52 w-full shrink-0 sm:h-60">
-              <Image
+              <GameImage
                 src={detail.heroUrl ?? detail.coverUrl}
                 alt={`${detail.title} key art`}
-                fill
+                fallbackSrc={CUSTOM_PLACEHOLDER_HERO}
                 sizes="(min-width: 640px) 672px, 100vw"
                 className="object-cover"
               />
@@ -178,6 +181,28 @@ export function GameDetailDialog({
                 </dl>
               </div>
 
+              {screenshots.length > 0 ? (
+                <div className="space-y-3 border-t border-border/60 pt-4">
+                  <h3 className="font-display text-sm font-semibold">Screenshots</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {screenshots.map((url, index) => (
+                      <span
+                        key={`${url}-${index}`}
+                        className="relative block aspect-video overflow-hidden rounded-lg border border-border/70 bg-card"
+                      >
+                        <GameImage
+                          src={url}
+                          alt={`${detail.title} screenshot ${index + 1}`}
+                          fallbackSrc={CUSTOM_PLACEHOLDER_HERO}
+                          sizes="(min-width: 640px) 210px, 45vw"
+                          className="object-cover"
+                        />
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="space-y-3 border-t border-border/60 pt-4">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-display text-sm font-semibold">More like this</h3>
@@ -208,10 +233,9 @@ export function GameDetailDialog({
                         className="group text-left focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
                       >
                         <span className="relative block aspect-3/4 overflow-hidden rounded-lg border border-border/70 bg-card">
-                          <Image
+                          <GameImage
                             src={similarGame.coverUrl}
                             alt={`${similarGame.title} cover art`}
-                            fill
                             sizes="(min-width: 640px) 140px, 30vw"
                             className="object-cover transition-transform duration-300 group-hover:scale-105"
                           />
