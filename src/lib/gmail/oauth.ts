@@ -93,7 +93,14 @@ async function requestToken(body: URLSearchParams, code: string) {
   });
 
   if (!response.ok) {
-    // The upstream body can echo request details, so only the status is kept.
+    const body = (await response.json().catch(() => null)) as
+      | { error?: string; error_description?: string }
+      | null;
+    const googleError = body?.error ?? "unknown";
+    const description = body?.error_description ?? "none";
+    console.error(
+      `[gmail:token] endpoint failed status=${response.status} google_error=${googleError} description="${description}"`,
+    );
     throw new GmailApiError(`Google rejected the token request (${response.status}).`, code);
   }
 
