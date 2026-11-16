@@ -108,6 +108,24 @@ export default function HomePage() {
 
     const parallaxItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-parallax]"));
     const depthItems = Array.from(root.querySelectorAll<HTMLElement>("[data-3d-scroll]"));
+    const bird = root.querySelector<HTMLElement>("[data-gamepilot-bird]");
+    let birdResetTimer: number | undefined;
+    const triggerBird = () => {
+      if (!bird || reduceMotion) return;
+      bird.classList.remove("bird-flap");
+      void bird.offsetWidth;
+      bird.classList.add("bird-flap");
+      if (birdResetTimer) window.clearTimeout(birdResetTimer);
+      birdResetTimer = window.setTimeout(() => bird.classList.remove("bird-flap"), 1100);
+    };
+    const handleBirdKey = (event: KeyboardEvent) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        triggerBird();
+      }
+    };
+    bird?.addEventListener("click", triggerBird);
+    bird?.addEventListener("keydown", handleBirdKey);
     let frame = 0;
     let pointerX = 0;
     let pointerY = 0;
@@ -116,6 +134,7 @@ export default function HomePage() {
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const scrollProgress = window.scrollY / maxScroll;
       root.style.setProperty("--ambient-scroll", `${(scrollProgress - 0.5) * 110}px`);
+      if (bird) bird.style.setProperty("--bird-scroll", `${Math.min(90, window.scrollY * 0.055)}px`);
     };
     const handlePointerMove = (event: PointerEvent) => {
       if (reduceMotion || event.pointerType === "touch") return;
@@ -123,6 +142,13 @@ export default function HomePage() {
       pointerY = (event.clientY / Math.max(1, window.innerHeight) - 0.5) * 26;
       root.style.setProperty("--ambient-x", `${pointerX}px`);
       root.style.setProperty("--ambient-y", `${pointerY}px`);
+      if (bird) {
+        const birdRect = bird.getBoundingClientRect();
+        const localX = (event.clientX - (birdRect.left + birdRect.width / 2)) / Math.max(1, birdRect.width / 2);
+        const localY = (event.clientY - (birdRect.top + birdRect.height / 2)) / Math.max(1, birdRect.height / 2);
+        bird.style.setProperty("--bird-pointer-x", `${Math.max(-1, Math.min(1, localX)) * 10}deg`);
+        bird.style.setProperty("--bird-pointer-y", `${Math.max(-1, Math.min(1, localY)) * -12}deg`);
+      }
     };
     const updateParallax = () => {
       cancelAnimationFrame(frame);
@@ -155,6 +181,9 @@ export default function HomePage() {
 
     return () => {
       observer?.disconnect();
+      bird?.removeEventListener("click", triggerBird);
+      bird?.removeEventListener("keydown", handleBirdKey);
+      if (birdResetTimer) window.clearTimeout(birdResetTimer);
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", updateParallax);
       window.removeEventListener("scroll", updateAmbient);
@@ -205,6 +234,40 @@ export default function HomePage() {
         [data-home-motion] .ambient-pulse {
           animation: ambient-pulse 5s ease-in-out infinite;
         }
+        [data-home-motion] > section { position: relative; z-index: 2; }
+        [data-home-motion] .gamepilot-bird {
+          transform: translate3d(var(--bird-pointer-x, 0deg), calc(var(--bird-scroll, 0px) + var(--bird-float, 0px)), 0) rotateY(var(--bird-pointer-y, 0deg)) rotateZ(-7deg);
+          transform-style: preserve-3d;
+          transition: transform 420ms cubic-bezier(.2,.7,.2,1);
+          filter: drop-shadow(0 24px 38px rgba(8,8,22,.5)) drop-shadow(0 0 26px rgba(124,58,237,.28));
+          animation: bird-hover 7s ease-in-out infinite;
+        }
+        [data-home-motion] .bird-wing {
+          transform-box: fill-box;
+          transform-origin: 50% 82%;
+          transition: transform 550ms cubic-bezier(.2,.7,.2,1);
+        }
+        [data-home-motion] .bird-flap .bird-wing-left { animation: bird-wing-left 1s cubic-bezier(.2,.7,.2,1); }
+        [data-home-motion] .bird-flap .bird-wing-right { animation: bird-wing-right 1s cubic-bezier(.2,.7,.2,1); }
+        [data-home-motion] .bird-flap .bird-body { animation: bird-dash 1s ease-out; }
+        @keyframes bird-hover {
+          0%,100% { margin-top: 0; }
+          50% { margin-top: -18px; }
+        }
+        @keyframes bird-wing-left {
+          0%,100% { transform: rotate(0deg) scaleY(1); }
+          35% { transform: rotate(-24deg) scaleY(.82); }
+          70% { transform: rotate(12deg) scaleY(1.08); }
+        }
+        @keyframes bird-wing-right {
+          0%,100% { transform: rotate(0deg) scaleY(1); }
+          35% { transform: rotate(24deg) scaleY(.82); }
+          70% { transform: rotate(-12deg) scaleY(1.08); }
+        }
+        @keyframes bird-dash {
+          0%,100% { transform: translate3d(0,0,0) scale(1); }
+          45% { transform: translate3d(18px,-14px,35px) scale(1.06); }
+        }
         @keyframes ambient-orbit-turn {
           from { rotate: 0deg; }
           to { rotate: 360deg; }
@@ -220,6 +283,12 @@ export default function HomePage() {
           [data-home-motion] .ambient-orb,
           [data-home-motion] .ambient-orb-core,
           [data-home-motion] .ambient-orbit,
+          [data-home-motion] .ambient-pulse,
+          [data-home-motion] .gamepilot-bird,
+          [data-home-motion] .bird-wing {
+            animation: none !important;
+            transition: none !important;
+          }
           [data-home-motion] .ambient-pulse {
             opacity: 1 !important;
             transform: none !important;
@@ -250,6 +319,56 @@ export default function HomePage() {
         </div>
         <div className="absolute left-[-18rem] top-[55%] size-[32rem] rounded-full bg-brand-cyan/[0.075] blur-[110px]" />
         <div className="absolute right-[12%] top-[78%] size-[24rem] rounded-full bg-brand-purple/[0.07] blur-[110px]" />
+      </div>
+
+      <div aria-hidden="false" className="pointer-events-none absolute inset-x-0 top-[620px] z-[1] h-[1500px] overflow-hidden">
+        <div
+          data-gamepilot-bird
+          role="button"
+          tabIndex={0}
+          aria-label="Make the GamePilot bird flap its wings"
+          title="Click to make the bird fly"
+          className="gamepilot-bird pointer-events-auto absolute right-[-5rem] top-24 w-[min(58vw,650px)] cursor-pointer opacity-[0.24] sm:right-[2%] sm:top-16 sm:opacity-[0.3] lg:right-[8%]"
+          style={{ perspective: "1100px" }}
+        >
+          <svg viewBox="0 0 720 520" className="h-auto w-full overflow-visible" role="img" aria-label="A futuristic 3D falcon in flight, glowing violet and cyan">
+            <defs>
+              <linearGradient id="gpBirdViolet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#e9d5ff"/><stop offset=".32" stopColor="#a855f7"/><stop offset="1" stopColor="#4c1d95"/></linearGradient>
+              <linearGradient id="gpBirdCyan" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#cffafe"/><stop offset=".45" stopColor="#22d3ee"/><stop offset="1" stopColor="#155e75"/></linearGradient>
+              <linearGradient id="gpBirdDeep" x1="0" y1="0" x2="0.9" y2="1"><stop offset="0" stopColor="#c4b5fd"/><stop offset=".5" stopColor="#6d28d9"/><stop offset="1" stopColor="#17152f"/></linearGradient>
+              <radialGradient id="gpBirdGlow"><stop offset="0" stopColor="#67e8f9" stopOpacity=".9"/><stop offset="1" stopColor="#8b5cf6" stopOpacity="0"/></radialGradient>
+              <filter id="gpBirdBlur"><feGaussianBlur stdDeviation="18"/></filter>
+            </defs>
+            <ellipse cx="360" cy="275" rx="250" ry="150" fill="url(#gpBirdGlow)" opacity=".28" filter="url(#gpBirdBlur)"/>
+            <g className="bird-wing bird-wing-left">
+              <path d="M350 255 C270 190 180 72 28 30 C77 100 105 160 145 202 C92 172 50 160 8 154 C92 242 178 289 300 302 Z" fill="url(#gpBirdViolet)" stroke="#d8b4fe" strokeOpacity=".55" strokeWidth="3"/>
+              <path d="M325 260 C235 185 164 116 72 67 C137 157 196 224 291 292" fill="none" stroke="#f5d0fe" strokeOpacity=".55" strokeWidth="5"/>
+              <path d="M292 278 C220 231 158 195 91 176 M268 286 C207 263 162 246 119 225 M246 292 C201 281 166 270 145 258" fill="none" stroke="#22d3ee" strokeOpacity=".65" strokeWidth="3"/>
+              <path d="M330 260 L29 30 L145 202 L8 154 L300 302 Z" fill="#8b5cf6" opacity=".12"/>
+            </g>
+            <g className="bird-wing bird-wing-right">
+              <path d="M370 255 C450 190 540 72 692 30 C643 100 615 160 575 202 C628 172 670 160 712 154 C628 242 542 289 420 302 Z" fill="url(#gpBirdCyan)" stroke="#a5f3fc" strokeOpacity=".6" strokeWidth="3"/>
+              <path d="M395 260 C485 185 556 116 648 67 C583 157 524 224 429 292" fill="none" stroke="#ecfeff" strokeOpacity=".55" strokeWidth="5"/>
+              <path d="M428 278 C500 231 562 195 629 176 M452 286 C513 263 558 246 601 225 M474 292 C519 281 554 270 575 258" fill="none" stroke="#c4b5fd" strokeOpacity=".75" strokeWidth="3"/>
+            </g>
+            <g className="bird-body">
+              <path d="M360 145 C414 190 437 250 412 326 C397 376 374 413 360 432 C346 413 323 376 308 326 C283 250 306 190 360 145Z" fill="url(#gpBirdDeep)" stroke="#c4b5fd" strokeOpacity=".8" strokeWidth="3"/>
+              <path d="M360 163 C389 209 397 266 379 331 C372 355 365 375 360 387 C355 375 348 355 341 331 C323 266 331 209 360 163Z" fill="url(#gpBirdCyan)" opacity=".78"/>
+              <path d="M326 335 C287 375 260 419 235 481 C291 460 336 436 360 409 C384 436 429 460 485 481 C460 419 433 375 394 335" fill="url(#gpBirdViolet)" stroke="#a78bfa" strokeOpacity=".65" strokeWidth="3"/>
+              <path d="M345 397 L280 463 M360 410 L360 490 M375 397 L440 463" stroke="#67e8f9" strokeOpacity=".7" strokeWidth="4" strokeLinecap="round"/>
+              <path d="M310 214 C325 157 342 119 360 92 C378 119 395 157 410 214 C386 197 374 192 360 190 C346 192 334 197 310 214Z" fill="url(#gpBirdViolet)" stroke="#ddd6fe" strokeOpacity=".65" strokeWidth="3"/>
+              <path d="M360 91 C350 62 354 44 360 25 C366 44 370 62 360 91Z" fill="#67e8f9"/>
+              <circle cx="360" cy="226" r="8" fill="#ecfeff"/>
+              <circle cx="360" cy="226" r="3.5" fill="#312e81"/>
+              <path d="M345 250 L360 270 L375 250" fill="none" stroke="#e0f2fe" strokeWidth="3" strokeLinecap="round"/>
+              <path d="M350 279 Q360 290 370 279" fill="none" stroke="#67e8f9" strokeWidth="3" strokeLinecap="round"/>
+            </g>
+            <g fill="none" strokeLinecap="round">
+              <path d="M130 360 C205 420 265 430 315 410" stroke="#a855f7" strokeOpacity=".45" strokeWidth="3" strokeDasharray="4 13"/>
+              <path d="M590 360 C515 420 455 430 405 410" stroke="#22d3ee" strokeOpacity=".45" strokeWidth="3" strokeDasharray="4 13"/>
+            </g>
+          </svg>
+        </div>
       </div>
 
       <section className="relative flex min-h-[760px] items-center overflow-hidden px-4 pb-24 pt-20 sm:px-6 lg:min-h-[820px] lg:px-8 lg:pt-16">
