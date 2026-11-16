@@ -168,7 +168,7 @@ export async function recordSyncEvent(input: {
   const result = await getPool().query<{ id: string }>(
     `INSERT INTO gmail_sync_events (id, connection_id, event_type, status, error_code, pubsub_message_id)
      VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT (pubsub_message_id) DO NOTHING
+     ON CONFLICT (pubsub_message_id) WHERE pubsub_message_id IS NOT NULL DO NOTHING
      RETURNING id`,
     [
       randomUUID(),
@@ -191,7 +191,7 @@ export async function claimPubSubMessage(connectionId: string | null, messageId:
   const result = await getPool().query<{ id: string }>(
     `INSERT INTO gmail_sync_events (id, connection_id, event_type, status, pubsub_message_id)
      VALUES ($1, $2, 'pubsub', 'received', $3)
-     ON CONFLICT (pubsub_message_id) DO NOTHING
+     ON CONFLICT (pubsub_message_id) WHERE pubsub_message_id IS NOT NULL DO NOTHING
      RETURNING id`,
     [randomUUID(), connectionId, messageId],
   );
