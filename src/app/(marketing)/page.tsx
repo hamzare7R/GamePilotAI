@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import {
   Activity,
@@ -83,8 +84,84 @@ const worlds = [
 ];
 
 export default function HomePage() {
+  useEffect(() => {
+    const root = document.querySelector<HTMLElement>("[data-home-motion]");
+    if (!root) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const revealItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-reveal]"));
+    let observer: IntersectionObserver | undefined;
+
+    if (!reduceMotion && "IntersectionObserver" in window) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            (entry.target as HTMLElement).classList.toggle("scroll-is-visible", entry.isIntersecting);
+          });
+        },
+        { threshold: 0.12, rootMargin: "0px 0px -7% 0px" },
+      );
+      revealItems.forEach((item) => observer?.observe(item));
+    } else {
+      revealItems.forEach((item) => item.classList.add("scroll-is-visible"));
+    }
+
+    const parallaxItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-parallax]"));
+    let frame = 0;
+    const updateParallax = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const viewportHeight = window.innerHeight || 1;
+        parallaxItems.forEach((item) => {
+          const rect = item.getBoundingClientRect();
+          const distance = (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight;
+          item.style.setProperty("--scroll-shift", reduceMotion ? "0px" : `${Math.max(-24, Math.min(24, distance * -22))}px`);
+        });
+      });
+    };
+
+    if (!reduceMotion) {
+      updateParallax();
+      window.addEventListener("scroll", updateParallax, { passive: true });
+      window.addEventListener("resize", updateParallax);
+    }
+
+    return () => {
+      observer?.disconnect();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", updateParallax);
+      window.removeEventListener("resize", updateParallax);
+    };
+  }, []);
+
   return (
-    <div className="relative isolate overflow-hidden">
+    <div data-home-motion className="homepage-motion relative isolate overflow-hidden">
+      <style jsx global>{`
+        [data-home-motion] [data-scroll-reveal] {
+          opacity: 0;
+          transform: translate3d(0, 30px, 0) scale(.99);
+          transition: opacity 680ms cubic-bezier(.2,.7,.2,1), transform 780ms cubic-bezier(.2,.7,.2,1);
+          will-change: opacity, transform;
+        }
+        [data-home-motion] [data-scroll-reveal].scroll-is-visible {
+          opacity: 1;
+          transform: translate3d(0, 0, 0) scale(1);
+        }
+        [data-home-motion] [data-scroll-parallax] {
+          transform: translate3d(0, var(--scroll-shift, 0px), 0);
+          transition: transform 180ms linear;
+          will-change: transform;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          [data-home-motion] [data-scroll-reveal],
+          [data-home-motion] [data-scroll-parallax] {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
+            will-change: auto;
+          }
+        }
+      `}</style>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] bg-radial-glow opacity-90" />
 
       <section className="relative flex min-h-[760px] items-center overflow-hidden px-4 pb-24 pt-20 sm:px-6 lg:min-h-[820px] lg:px-8 lg:pt-16">
@@ -93,7 +170,7 @@ export default function HomePage() {
         <div className="pointer-events-none absolute -right-48 top-20 -z-10 size-[560px] rounded-full bg-brand-cyan/10 blur-[160px]" />
 
         <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-4">
-          <div className="relative z-10 max-w-2xl">
+          <div data-scroll-reveal className="relative z-10 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3.5 py-2 text-xs font-medium tracking-wide text-white/75 shadow-[0_0_35px_-15px_rgba(168,85,247,0.7)] backdrop-blur-xl">
               <span className="relative flex size-2">
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-cyan opacity-60" />
@@ -143,7 +220,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <HeroWorld />
+          <div data-scroll-parallax><HeroWorld /></div>
         </div>
 
         <a
@@ -156,7 +233,7 @@ export default function HomePage() {
       </section>
 
       <section id="experience" className="scroll-mt-24 border-y border-white/[0.07] bg-white/[0.018] px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
-        <div className="mx-auto max-w-7xl">
+        <div data-scroll-reveal className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl">
               <p className="text-xs font-semibold tracking-[0.3em] text-brand-cyan uppercase">A new way to play</p>
@@ -178,7 +255,7 @@ export default function HomePage() {
               const tone = item.tone === "cyan" ? "text-brand-cyan" : item.tone === "pink" ? "text-fuchsia-300" : "text-brand-purple";
               const glow = item.tone === "cyan" ? "bg-brand-cyan/10" : item.tone === "pink" ? "bg-fuchsia-400/10" : "bg-brand-purple/10";
               return (
-                <article key={item.number} className="group relative min-h-[330px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0b0b16] p-7 transition-all duration-500 hover:-translate-y-1 hover:border-white/20 sm:p-9">
+                <article key={item.number} data-scroll-reveal className="group relative min-h-[330px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0b0b16] p-7 transition-all duration-500 hover:-translate-y-1 hover:border-white/20 sm:p-9">
                   <div className={`pointer-events-none absolute -right-16 -top-16 size-52 rounded-full ${glow} blur-[70px] transition-all duration-500 group-hover:scale-125`} />
                   <div className="relative flex h-full flex-col">
                     <div className="flex items-center justify-between">
@@ -203,7 +280,7 @@ export default function HomePage() {
 
       <section className="relative overflow-hidden px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
         <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/10 blur-[150px]" />
-        <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+        <div data-scroll-reveal className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.8fr_1.2fr]">
           <div>
             <p className="text-xs font-semibold tracking-[0.3em] text-brand-purple uppercase">Your next chapter</p>
             <h2 className="mt-5 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.055em] text-white sm:text-6xl">
@@ -223,7 +300,7 @@ export default function HomePage() {
             {worlds.map((world, index) => {
               const Icon = world.icon;
               return (
-                <div key={world.name} className={`group relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0b16] p-6 transition-all duration-500 hover:-translate-y-2 hover:border-white/20 sm:min-h-[330px] ${index === 1 ? "sm:mt-12" : index === 2 ? "sm:mt-24" : ""}`}>
+                <div key={world.name} data-scroll-reveal className={`group relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0b16] p-6 transition-all duration-500 hover:-translate-y-2 hover:border-white/20 sm:min-h-[330px] ${index === 1 ? "sm:mt-12" : index === 2 ? "sm:mt-24" : ""}`}>
                   <div className={`absolute -right-12 -top-12 size-40 rounded-full bg-gradient-to-br ${world.color} opacity-15 blur-2xl transition-opacity group-hover:opacity-35`} />
                   <div className="relative flex items-center justify-between">
                     <span className="font-mono text-[10px] text-white/35">0{index + 1}</span>
@@ -244,7 +321,7 @@ export default function HomePage() {
       </section>
 
       <section className="border-y border-white/[0.07] bg-white/[0.018] px-4 py-24 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto max-w-7xl">
+        <div data-scroll-reveal className="mx-auto max-w-7xl">
           <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
               <p className="text-xs font-semibold tracking-[0.3em] text-brand-cyan uppercase">The flight plan</p>
@@ -262,7 +339,7 @@ export default function HomePage() {
               {journey.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.step} className="group flex gap-5 rounded-2xl border border-white/10 bg-[#0b0b16]/80 p-5 transition-colors hover:border-brand-purple/40 sm:gap-7 sm:p-7">
+                  <div key={item.step} data-scroll-reveal className="group flex gap-5 rounded-2xl border border-white/10 bg-[#0b0b16]/80 p-5 transition-colors hover:border-brand-purple/40 sm:gap-7 sm:p-7">
                     <span className="pt-1 font-mono text-xs text-brand-cyan/70">{item.step}</span>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-display text-xl font-semibold text-white">{item.title}</h3>
@@ -278,7 +355,7 @@ export default function HomePage() {
       </section>
 
       <section className="px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
-        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b16] px-6 py-16 text-center sm:px-12 sm:py-24">
+        <div data-scroll-reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b16] px-6 py-16 text-center sm:px-12 sm:py-24">
           <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_65%_85%_at_50%_50%,black,transparent)]" />
           <div className="pointer-events-none absolute left-1/2 top-0 -z-0 size-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/20 blur-[120px]" />
           <div className="relative">
