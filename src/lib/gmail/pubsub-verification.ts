@@ -34,41 +34,85 @@ function subscriptionMatches(expected: string, received: string) {
  * Kept separate from `verifyPubSubPush` so it can be unit tested without a
  * real Google-signed OIDC token.
  */
-export function parsePubSubPayload(data: string): { emailAddress: string; historyId: string } {
+export function parsePubSubPayload(
+  data: string,
+): { emailAddress: string; historyId: string } {
   let decoded: unknown;
+
   try {
     decoded = JSON.parse(Buffer.from(data, "base64url").toString("utf8"));
   } catch {
-    console.warn("[gmail:pubsub] payload rejected: data is not valid Base64URL JSON");
-    throw new PubSubVerificationError("Pub/Sub payload is not valid JSON.", "PAYLOAD_INVALID");
+    console.warn(
+      "[gmail:pubsub] payload rejected: data is not valid Base64URL JSON",
+    );
+    throw new PubSubVerificationError(
+      "Pub/Sub payload is not valid JSON.",
+      "PAYLOAD_INVALID",
+    );
   }
 
-  if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) {
-    console.warn("[gmail:pubsub] payload rejected: decoded payload is not an object");
-    throw new PubSubVerificationError("Pub/Sub payload is not a valid object.", "PAYLOAD_INVALID");
+  if (
+    typeof decoded !== "object" ||
+    decoded === null ||
+    Array.isArray(decoded)
+  ) {
+    console.warn(
+      "[gmail:pubsub] payload rejected: decoded payload is not an object",
+    );
+    throw new PubSubVerificationError(
+      "Pub/Sub payload is not a valid object.",
+      "PAYLOAD_INVALID",
+    );
   }
 
-  const payload = decoded as { emailAddress?: unknown; historyId?: unknown };
-  if (typeof payload.emailAddress !== "string") {
-    console.warn("[gmail:pubsub] payload rejected: emailAddress has invalid type", {
-      type: typeof payload.emailAddress,
-    });
-    throw new PubSubVerificationError("Pub/Sub payload is missing emailAddress or historyId.", "PAYLOAD_INVALID");
+  const payload = decoded as {
+    emailAddress?: unknown;
+    historyId?: unknown;
+  };
+
+  if (
+    typeof payload.emailAddress !== "string" ||
+    !payload.emailAddress.trim()
+  ) {
+    console.warn(
+      "[gmail:pubsub] payload rejected: emailAddress has invalid type or is empty",
+      { type: typeof payload.emailAddress },
+    );
+    throw new PubSubVerificationError(
+      "Pub/Sub payload is missing emailAddress or historyId.",
+      "PAYLOAD_INVALID",
+    );
   }
 
-  if (typeof payload.historyId !== "string" || !payload.historyId) {
-    console.warn("[gmail:pubsub] payload rejected: historyId has invalid type or is empty", {
-      type: typeof payload.historyId,
-    });
-    throw new PubSubVerificationError("Pub/Sub payload is missing emailAddress or historyId.", "PAYLOAD_INVALID");
+  let historyId: string;
+
+  if (
+    typeof payload.historyId === "string" &&
+    payload.historyId.trim().length > 0
+  ) {
+    historyId = payload.historyId;
+  } else if (
+    typeof payload.historyId === "number" &&
+    Number.isSafeInteger(payload.historyId) &&
+    payload.historyId > 0
+  ) {
+    historyId = String(payload.historyId);
+  } else {
+    console.warn(
+      "[gmail:pubsub] payload rejected: historyId has invalid type or value",
+      { type: typeof payload.historyId },
+    );
+    throw new PubSubVerificationError(
+      "Pub/Sub payload is missing emailAddress or historyId.",
+      "PAYLOAD_INVALID",
+    );
   }
 
   return {
     emailAddress: payload.emailAddress.trim().toLowerCase(),
-    historyId: payload.historyId,
+    historyId,
   };
 }
-
 /**
  * Verifies a Pub/Sub push request end to end:
  * 1. Google-signed OIDC bearer token (issuer, audience, signature via JWKS).
