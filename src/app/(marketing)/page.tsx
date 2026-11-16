@@ -134,7 +134,11 @@ export default function HomePage() {
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
       const scrollProgress = window.scrollY / maxScroll;
       root.style.setProperty("--ambient-scroll", `${(scrollProgress - 0.5) * 110}px`);
-      if (bird) bird.style.setProperty("--bird-scroll", `${Math.min(90, window.scrollY * 0.055)}px`);
+      if (bird) {
+        const travel = Math.min(42, scrollProgress * 42);
+        bird.style.setProperty("--bird-scroll", `${travel}vh`);
+        bird.style.setProperty("--bird-scroll-rotate", `${(scrollProgress - 0.5) * 16}deg`);
+      }
     };
     const handlePointerMove = (event: PointerEvent) => {
       if (reduceMotion || event.pointerType === "touch") return;
@@ -236,7 +240,7 @@ export default function HomePage() {
         }
         [data-home-motion] > section { position: relative; z-index: 2; }
         [data-home-motion] .gamepilot-bird {
-          transform: translate3d(0, calc(var(--bird-scroll, 0px) + var(--bird-float, 0px)), 0) rotateX(var(--bird-pointer-x, 0deg)) rotateY(var(--bird-pointer-y, 0deg)) rotateZ(-7deg);
+          transform: translate3d(0, calc(var(--bird-scroll, 0vh) + var(--bird-float, 0px)), 0) rotateX(var(--bird-pointer-x, 0deg)) rotateY(var(--bird-pointer-y, 0deg)) rotateZ(calc(-7deg + var(--bird-scroll-rotate, 0deg)));
           transform-style: preserve-3d;
           transition: transform 420ms cubic-bezier(.2,.7,.2,1);
           filter: drop-shadow(0 24px 38px rgba(8,8,22,.5)) drop-shadow(0 0 26px rgba(124,58,237,.28));
@@ -246,6 +250,12 @@ export default function HomePage() {
           transform-box: fill-box;
           transform-origin: 50% 82%;
           transition: transform 550ms cubic-bezier(.2,.7,.2,1);
+          animation: bird-cruise 3.8s ease-in-out infinite;
+        }
+        [data-home-motion] .bird-wing-right { animation-delay: -1.9s; }
+        @keyframes bird-cruise {
+          0%, 100% { transform: rotate(0deg) scaleY(1); }
+          50% { transform: rotate(-5deg) scaleY(.94); }
         }
         [data-home-motion] .bird-flap .bird-wing-left { animation: bird-wing-left 1s cubic-bezier(.2,.7,.2,1); }
         [data-home-motion] .bird-flap .bird-wing-right { animation: bird-wing-right 1s cubic-bezier(.2,.7,.2,1); }
@@ -321,14 +331,14 @@ export default function HomePage() {
         <div className="absolute right-[12%] top-[78%] size-[24rem] rounded-full bg-brand-purple/[0.07] blur-[110px]" />
       </div>
 
-      <div aria-hidden="false" className="pointer-events-none absolute inset-x-0 top-[620px] z-[1] h-[1500px] overflow-hidden">
+      <div aria-hidden="false" className="pointer-events-none absolute inset-x-0 top-0 bottom-0 z-[1] overflow-hidden">
         <div
           data-gamepilot-bird
           role="button"
           tabIndex={0}
           aria-label="Make the GamePilot bird flap its wings"
           title="Click to make the bird fly"
-          className="gamepilot-bird pointer-events-none absolute right-[-5rem] top-24 w-[min(58vw,650px)] cursor-pointer opacity-[0.24] sm:right-[2%] sm:top-16 sm:opacity-[0.3] lg:right-[8%]"
+          className="gamepilot-bird pointer-events-none sticky top-[16vh] ml-auto mr-[-5rem] mt-[16vh] w-[min(58vw,650px)] cursor-pointer opacity-[0.24] sm:mr-[2%] sm:opacity-[0.3] lg:mr-[8%]"
           style={{ perspective: "1100px" }}
         >
           <svg viewBox="0 0 720 520" className="pointer-events-auto h-auto w-full overflow-visible" role="img" aria-label="A futuristic 3D falcon in flight, glowing violet and cyan">
