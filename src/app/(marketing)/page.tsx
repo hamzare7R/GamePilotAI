@@ -108,29 +108,6 @@ export default function HomePage() {
 
     const parallaxItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-parallax]"));
     const depthItems = Array.from(root.querySelectorAll<HTMLElement>("[data-3d-scroll]"));
-    const gameCards = Array.from(root.querySelectorAll<HTMLElement>("[data-game-card]"));
-    const handleGameCardMove = (event: PointerEvent) => {
-      if (reduceMotion || event.pointerType === "touch") return;
-      const card = event.currentTarget as HTMLElement;
-      const rect = card.getBoundingClientRect();
-      const x = (event.clientX - rect.left) / Math.max(1, rect.width);
-      const y = (event.clientY - rect.top) / Math.max(1, rect.height);
-      card.style.setProperty("--card-rotate-x", `${(0.5 - y) * 12}deg`);
-      card.style.setProperty("--card-rotate-y", `${(x - 0.5) * 14}deg`);
-      card.style.setProperty("--card-glow-x", `${x * 100}%`);
-      card.style.setProperty("--card-glow-y", `${y * 100}%`);
-    };
-    const resetGameCard = (event: PointerEvent) => {
-      const card = event.currentTarget as HTMLElement;
-      card.style.setProperty("--card-rotate-x", "0deg");
-      card.style.setProperty("--card-rotate-y", "0deg");
-      card.style.setProperty("--card-glow-x", "50%");
-      card.style.setProperty("--card-glow-y", "50%");
-    };
-    gameCards.forEach((card) => {
-      card.addEventListener("pointermove", handleGameCardMove);
-      card.addEventListener("pointerleave", resetGameCard);
-    });
     const bird = root.querySelector<HTMLElement>("[data-gamepilot-bird]");
     let birdResetTimer: number | undefined;
     const triggerBird = () => {
@@ -210,10 +187,6 @@ export default function HomePage() {
       observer?.disconnect();
       bird?.removeEventListener("click", triggerBird);
       bird?.removeEventListener("keydown", handleBirdKey);
-      gameCards.forEach((card) => {
-        card.removeEventListener("pointermove", handleGameCardMove);
-        card.removeEventListener("pointerleave", resetGameCard);
-      });
       if (birdResetTimer) window.clearTimeout(birdResetTimer);
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", updateParallax);
@@ -247,33 +220,6 @@ export default function HomePage() {
           transform-style: preserve-3d;
           transition: translate 220ms ease-out, rotate 220ms ease-out;
           will-change: translate, rotate;
-        }
-        [data-home-motion] .gamepilot-game-card {
-          transform: perspective(1100px) rotateX(var(--card-rotate-x, 0deg)) rotateY(var(--card-rotate-y, 0deg)) translateY(var(--scroll-shift, 0px));
-          transform-style: preserve-3d;
-          transition: transform 320ms cubic-bezier(.2,.7,.2,1), border-color 320ms ease, box-shadow 320ms ease;
-          will-change: transform;
-        }
-        [data-home-motion] .gamepilot-game-card::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          opacity: 0;
-          background: radial-gradient(circle at var(--card-glow-x, 50%) var(--card-glow-y, 50%), rgba(34,211,238,.2), transparent 42%);
-          transition: opacity 300ms ease;
-        }
-        [data-home-motion] .gamepilot-game-card:hover::after { opacity: 1; }
-        [data-home-motion] .gamepilot-game-card:hover {
-          border-color: rgba(103,232,249,.42);
-          box-shadow: 0 24px 70px -32px rgba(34,211,238,.35), 0 0 35px -22px rgba(168,85,247,.6);
-        }
-        [data-home-motion] .gamepilot-game-card [data-card-image] {
-          transition: transform 700ms cubic-bezier(.2,.7,.2,1), filter 500ms ease;
-        }
-        [data-home-motion] .gamepilot-game-card:hover [data-card-image] {
-          transform: scale(1.07);
-          filter: saturate(1.15);
         }
         [data-home-motion] .ambient-orb {
           transform: translate3d(var(--ambient-x, 0px), calc(var(--ambient-y, 0px) + var(--ambient-scroll, 0px)), 0) rotateX(58deg) rotateZ(-28deg);
@@ -545,62 +491,6 @@ export default function HomePage() {
                 </article>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      <section id="featured-games" className="relative overflow-hidden border-y border-white/[0.07] bg-[#070711]/70 px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
-        <div className="pointer-events-none absolute -left-40 top-20 size-[420px] rounded-full bg-brand-purple/10 blur-[130px]" />
-        <div className="pointer-events-none absolute -right-40 bottom-0 size-[420px] rounded-full bg-brand-cyan/10 blur-[130px]" />
-        <div className="relative mx-auto max-w-7xl">
-          <div data-scroll-reveal className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-3xl">
-              <p className="text-xs font-semibold tracking-[0.3em] text-brand-cyan uppercase">Enter the arena</p>
-              <h2 className="mt-5 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.055em] text-white sm:text-6xl">
-                Your next world
-                <br />
-                <span className="text-gradient">is one click away.</span>
-              </h2>
-            </div>
-            <Link href="/games" className="inline-flex items-center gap-2 pb-1 text-sm font-medium text-white/60 transition-colors hover:text-brand-cyan">
-              Browse your library <ArrowRight className="size-4" />
-            </Link>
-          </div>
-
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-            {[
-              { title: "Cyberpunk 2077", genre: "OPEN WORLD / RPG", players: "NIGHT CITY", image: "https://cdn.akamai.steamstatic.com/steam/apps/1091500/library_600x900_2x.jpg", accent: "from-fuchsia-500/35" },
-              { title: "ELDEN RING", genre: "ACTION / RPG", players: "THE LANDS BETWEEN", image: "https://cdn.akamai.steamstatic.com/steam/apps/1245620/library_600x900_2x.jpg", accent: "from-amber-400/30" },
-              { title: "APEX LEGENDS", genre: "BATTLE ROYALE", players: "SQUAD UP", image: "https://cdn.akamai.steamstatic.com/steam/apps/1172470/library_600x900_2x.jpg", accent: "from-red-500/30" },
-              { title: "BALDUR'S GATE 3", genre: "FANTASY / RPG", players: "FORGE YOUR STORY", image: "https://cdn.akamai.steamstatic.com/steam/apps/1086940/library_600x900_2x.jpg", accent: "from-violet-500/35" },
-            ].map((game, index) => (
-              <Link
-                key={game.title}
-                href="/games"
-                data-scroll-reveal
-                data-game-card
-                className="gamepilot-game-card group relative isolate min-h-[390px] overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0c0c18] shadow-[0_20px_70px_-45px_rgba(0,0,0,.9)]"
-                style={{ transitionDelay: `${index * 90}ms` }}
-              >
-                <div className="absolute inset-0 overflow-hidden">
-                  <img data-card-image src={game.image} alt={`${game.title} game artwork`} loading="lazy" className="h-full w-full object-cover object-center opacity-75" />
-                  <div className={`absolute inset-0 bg-gradient-to-t ${game.accent} via-[#080812]/25 to-[#050509]/25`} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#050509] via-[#050509]/10 to-transparent" />
-                </div>
-                <div className="absolute inset-x-0 top-0 flex items-center justify-between p-5">
-                  <span className="rounded-full border border-white/15 bg-black/35 px-3 py-1.5 font-mono text-[9px] tracking-[0.18em] text-white/75 backdrop-blur-xl">FEATURED / 0{index + 1}</span>
-                  <span className="flex size-9 items-center justify-center rounded-full border border-white/15 bg-black/30 text-white/75 backdrop-blur-xl transition-all group-hover:border-brand-cyan/50 group-hover:bg-brand-cyan/15 group-hover:text-brand-cyan"><ArrowRight className="-rotate-45 size-4 transition-transform group-hover:rotate-0" /></span>
-                </div>
-                <div className="absolute inset-x-0 bottom-0 p-5 sm:p-6">
-                  <p className="mb-2 text-[9px] font-semibold tracking-[0.24em] text-brand-cyan">{game.genre}</p>
-                  <h3 className="font-display text-xl font-bold tracking-tight text-white drop-shadow-lg">{game.title}</h3>
-                  <p className="mt-2 text-[9px] tracking-[0.2em] text-white/50">{game.players}</p>
-                  <div className="mt-5 h-px w-full bg-white/15">
-                    <div className="h-px w-1/3 bg-gradient-to-r from-brand-purple to-brand-cyan transition-all duration-500 group-hover:w-full" />
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>
