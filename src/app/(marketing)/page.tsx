@@ -107,6 +107,7 @@ export default function HomePage() {
     }
 
     const parallaxItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-parallax]"));
+    const depthItems = Array.from(root.querySelectorAll<HTMLElement>("[data-3d-scroll]"));
     let frame = 0;
     let pointerX = 0;
     let pointerY = 0;
@@ -131,6 +132,14 @@ export default function HomePage() {
           const rect = item.getBoundingClientRect();
           const distance = (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight;
           item.style.setProperty("--scroll-shift", reduceMotion ? "0px" : `${Math.max(-24, Math.min(24, distance * -22))}px`);
+        });
+        depthItems.forEach((item) => {
+          const rect = item.getBoundingClientRect();
+          const distance = (rect.top + rect.height / 2 - viewportHeight / 2) / viewportHeight;
+          const progress = Math.max(-1, Math.min(1, distance));
+          item.style.setProperty("--scroll-tilt", reduceMotion ? "0deg" : `${progress * -3.2}deg`);
+          item.style.setProperty("--scroll-depth", reduceMotion ? "0px" : `${(1 - Math.abs(progress)) * 22}px`);
+          item.style.setProperty("--scroll-shift", reduceMotion ? "0px" : `${progress * -13}px`);
         });
       });
     };
@@ -172,6 +181,13 @@ export default function HomePage() {
           transition: transform 180ms linear;
           will-change: transform;
         }
+        [data-home-motion] [data-3d-scroll] {
+          translate: 0 var(--scroll-shift, 0px) var(--scroll-depth, 0px);
+          rotate: x var(--scroll-tilt, 0deg);
+          transform-style: preserve-3d;
+          transition: translate 220ms ease-out, rotate 220ms ease-out;
+          will-change: translate, rotate;
+        }
         [data-home-motion] .ambient-orb {
           transform: translate3d(var(--ambient-x, 0px), calc(var(--ambient-y, 0px) + var(--ambient-scroll, 0px)), 0) rotateX(58deg) rotateZ(-28deg);
           transition: transform 260ms cubic-bezier(.2,.7,.2,1);
@@ -200,6 +216,7 @@ export default function HomePage() {
         @media (prefers-reduced-motion: reduce) {
           [data-home-motion] [data-scroll-reveal],
           [data-home-motion] [data-scroll-parallax],
+          [data-home-motion] [data-3d-scroll],
           [data-home-motion] .ambient-orb,
           [data-home-motion] .ambient-orb-core,
           [data-home-motion] .ambient-orbit,
@@ -326,7 +343,7 @@ export default function HomePage() {
               const tone = item.tone === "cyan" ? "text-brand-cyan" : item.tone === "pink" ? "text-fuchsia-300" : "text-brand-purple";
               const glow = item.tone === "cyan" ? "bg-brand-cyan/10" : item.tone === "pink" ? "bg-fuchsia-400/10" : "bg-brand-purple/10";
               return (
-                <article key={item.number} data-scroll-reveal className="group relative min-h-[330px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0b0b16] p-7 transition-all duration-500 hover:-translate-y-1 hover:border-white/20 sm:p-9">
+                <article key={item.number} data-scroll-reveal data-3d-scroll className="group relative min-h-[330px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0b0b16] p-7 transition-all duration-500 hover:-translate-y-1 hover:border-white/20 sm:p-9">
                   <div className={`pointer-events-none absolute -right-16 -top-16 size-52 rounded-full ${glow} blur-[70px] transition-all duration-500 group-hover:scale-125`} />
                   <div className="relative flex h-full flex-col">
                     <div className="flex items-center justify-between">
@@ -371,7 +388,7 @@ export default function HomePage() {
             {worlds.map((world, index) => {
               const Icon = world.icon;
               return (
-                <div key={world.name} data-scroll-reveal className={`group relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0b16] p-6 transition-all duration-500 hover:-translate-y-2 hover:border-white/20 sm:min-h-[330px] ${index === 1 ? "sm:mt-12" : index === 2 ? "sm:mt-24" : ""}`}>
+                <div key={world.name} data-scroll-reveal data-3d-scroll className={`group relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0b16] p-6 transition-all duration-500 hover:-translate-y-2 hover:border-white/20 sm:min-h-[330px] ${index === 1 ? "sm:mt-12" : index === 2 ? "sm:mt-24" : ""}`}>
                   <div className={`absolute -right-12 -top-12 size-40 rounded-full bg-gradient-to-br ${world.color} opacity-15 blur-2xl transition-opacity group-hover:opacity-35`} />
                   <div className="relative flex items-center justify-between">
                     <span className="font-mono text-[10px] text-white/35">0{index + 1}</span>
@@ -410,7 +427,7 @@ export default function HomePage() {
               {journey.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.step} data-scroll-reveal className="group flex gap-5 rounded-2xl border border-white/10 bg-[#0b0b16]/80 p-5 transition-colors hover:border-brand-purple/40 sm:gap-7 sm:p-7">
+                  <div key={item.step} data-scroll-reveal data-3d-scroll className="group flex gap-5 rounded-2xl border border-white/10 bg-[#0b0b16]/80 p-5 transition-colors hover:border-brand-purple/40 sm:gap-7 sm:p-7">
                     <span className="pt-1 font-mono text-xs text-brand-cyan/70">{item.step}</span>
                     <div className="min-w-0 flex-1">
                       <h3 className="font-display text-xl font-semibold text-white">{item.title}</h3>
