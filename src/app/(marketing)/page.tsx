@@ -236,7 +236,7 @@ export default function HomePage() {
         }
         [data-home-motion] > section { position: relative; z-index: 2; }
         [data-home-motion] .gamepilot-bird {
-          transform: translate3d(var(--bird-pointer-x, 0deg), calc(var(--bird-scroll, 0px) + var(--bird-float, 0px)), 0) rotateY(var(--bird-pointer-y, 0deg)) rotateZ(-7deg);
+          transform: translate3d(0, calc(var(--bird-scroll, 0px) + var(--bird-float, 0px)), 0) rotateX(var(--bird-pointer-x, 0deg)) rotateY(var(--bird-pointer-y, 0deg)) rotateZ(-7deg);
           transform-style: preserve-3d;
           transition: transform 420ms cubic-bezier(.2,.7,.2,1);
           filter: drop-shadow(0 24px 38px rgba(8,8,22,.5)) drop-shadow(0 0 26px rgba(124,58,237,.28));
@@ -328,10 +328,10 @@ export default function HomePage() {
           tabIndex={0}
           aria-label="Make the GamePilot bird flap its wings"
           title="Click to make the bird fly"
-          className="gamepilot-bird pointer-events-auto absolute right-[-5rem] top-24 w-[min(58vw,650px)] cursor-pointer opacity-[0.24] sm:right-[2%] sm:top-16 sm:opacity-[0.3] lg:right-[8%]"
+          className="gamepilot-bird pointer-events-none absolute right-[-5rem] top-24 w-[min(58vw,650px)] cursor-pointer opacity-[0.24] sm:right-[2%] sm:top-16 sm:opacity-[0.3] lg:right-[8%]"
           style={{ perspective: "1100px" }}
         >
-          <svg viewBox="0 0 720 520" className="h-auto w-full overflow-visible" role="img" aria-label="A futuristic 3D falcon in flight, glowing violet and cyan">
+          <svg viewBox="0 0 720 520" className="pointer-events-auto h-auto w-full overflow-visible" role="img" aria-label="A futuristic 3D falcon in flight, glowing violet and cyan">
             <defs>
               <linearGradient id="gpBirdViolet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#e9d5ff"/><stop offset=".32" stopColor="#a855f7"/><stop offset="1" stopColor="#4c1d95"/></linearGradient>
               <linearGradient id="gpBirdCyan" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#cffafe"/><stop offset=".45" stopColor="#22d3ee"/><stop offset="1" stopColor="#155e75"/></linearGradient>
