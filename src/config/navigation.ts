@@ -68,6 +68,7 @@ export const footerNav: NavSection[] = [
       { title: "How it works", href: "/#how-it-works" },
       { title: "API health", href: "/api/health" },
       { title: "Privacy Policy", href: "/privacy" },
+      { title: "Terms of Service", href: "/terms" },
     ],
   },
 ];
