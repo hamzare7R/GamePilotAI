@@ -108,6 +108,21 @@ export default function HomePage() {
 
     const parallaxItems = Array.from(root.querySelectorAll<HTMLElement>("[data-scroll-parallax]"));
     let frame = 0;
+    let pointerX = 0;
+    let pointerY = 0;
+    const updateAmbient = () => {
+      if (reduceMotion) return;
+      const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const scrollProgress = window.scrollY / maxScroll;
+      root.style.setProperty("--ambient-scroll", `${(scrollProgress - 0.5) * 110}px`);
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      if (reduceMotion || event.pointerType === "touch") return;
+      pointerX = (event.clientX / Math.max(1, window.innerWidth) - 0.5) * 34;
+      pointerY = (event.clientY / Math.max(1, window.innerHeight) - 0.5) * 26;
+      root.style.setProperty("--ambient-x", `${pointerX}px`);
+      root.style.setProperty("--ambient-y", `${pointerY}px`);
+    };
     const updateParallax = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -122,7 +137,10 @@ export default function HomePage() {
 
     if (!reduceMotion) {
       updateParallax();
+      updateAmbient();
       window.addEventListener("scroll", updateParallax, { passive: true });
+      window.addEventListener("scroll", updateAmbient, { passive: true });
+      window.addEventListener("pointermove", handlePointerMove, { passive: true });
       window.addEventListener("resize", updateParallax);
     }
 
@@ -130,6 +148,8 @@ export default function HomePage() {
       observer?.disconnect();
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", updateParallax);
+      window.removeEventListener("scroll", updateAmbient);
+      window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("resize", updateParallax);
     };
   }, []);
@@ -152,9 +172,21 @@ export default function HomePage() {
           transition: transform 180ms linear;
           will-change: transform;
         }
+        [data-home-motion] .ambient-orb {
+          transform: translate3d(var(--ambient-x, 0px), calc(var(--ambient-y, 0px) + var(--ambient-scroll, 0px)), 0) rotateX(58deg) rotateZ(-28deg);
+          transition: transform 260ms cubic-bezier(.2,.7,.2,1);
+          will-change: transform;
+        }
+        [data-home-motion] .ambient-orb-core {
+          transform: translate3d(calc(var(--ambient-x, 0px) * -.45), calc(var(--ambient-y, 0px) * -.45 - var(--ambient-scroll, 0px) * .35), 0) rotateY(18deg);
+          transition: transform 340ms cubic-bezier(.2,.7,.2,1);
+          will-change: transform;
+        }
         @media (prefers-reduced-motion: reduce) {
           [data-home-motion] [data-scroll-reveal],
-          [data-home-motion] [data-scroll-parallax] {
+          [data-home-motion] [data-scroll-parallax],
+          [data-home-motion] .ambient-orb,
+          [data-home-motion] .ambient-orb-core {
             opacity: 1 !important;
             transform: none !important;
             transition: none !important;
@@ -163,6 +195,16 @@ export default function HomePage() {
         }
       `}</style>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] bg-radial-glow opacity-90" />
+
+      {/* Interactive ambient object: reacts subtly to page scroll and pointer movement. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[8vh] -z-10 h-[150vh] overflow-hidden">
+        <div className="ambient-orb absolute right-[-18rem] top-[8rem] size-[38rem] rounded-full border border-brand-purple/20 bg-[radial-gradient(circle_at_35%_30%,rgba(168,85,247,0.18),rgba(56,189,248,0.07)_38%,transparent_68%)] shadow-[inset_0_0_90px_rgba(168,85,247,0.12),0_0_100px_rgba(56,189,248,0.08)] blur-[1px] sm:right-[-12rem] sm:size-[48rem]">
+          <div className="absolute inset-[12%] rounded-full border border-dashed border-brand-cyan/20" />
+          <div className="absolute inset-[27%] rounded-full border border-brand-purple/25" />
+          <div className="ambient-orb-core absolute left-[38%] top-[35%] size-[24%] rounded-[2rem] border border-white/15 bg-[linear-gradient(145deg,rgba(56,189,248,0.16),rgba(124,58,237,0.2),rgba(10,10,25,0.25))] shadow-[0_0_80px_rgba(124,58,237,0.2)] backdrop-blur-sm" />
+        </div>
+        <div className="absolute left-[-18rem] top-[55%] size-[28rem] rounded-full bg-brand-cyan/[0.045] blur-[100px]" />
+      </div>
 
       <section className="relative flex min-h-[760px] items-center overflow-hidden px-4 pb-24 pt-20 sm:px-6 lg:min-h-[820px] lg:px-8 lg:pt-16">
         <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_88%)]" />
