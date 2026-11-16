@@ -429,7 +429,25 @@ export default function HomePage() {
         <div data-scroll-reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b16] px-6 py-16 text-center sm:px-12 sm:py-24">
           <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_65%_85%_at_50%_50%,black,transparent)]" />
           <div className="pointer-events-none absolute left-1/2 top-0 -z-0 size-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/20 blur-[120px]" />
-          <div className="relative">
+
+          {/* 3D scroll scene continues into the final call-to-action. */}
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <div data-scroll-parallax className="absolute -right-16 top-8 size-48 sm:right-10 sm:top-4 sm:size-64">
+              <div className="absolute inset-4 rounded-[2.5rem] border border-brand-cyan/30 bg-[linear-gradient(145deg,rgba(56,189,248,0.12),rgba(124,58,237,0.08)_48%,rgba(8,8,20,0.08))] shadow-[0_0_70px_rgba(56,189,248,0.12),inset_0_0_45px_rgba(168,85,247,0.14)] [transform:perspective(700px)_rotateX(58deg)_rotateZ(38deg)]" />
+              <div className="absolute inset-10 rounded-[2rem] border border-dashed border-brand-purple/45 [transform:perspective(700px)_rotateX(58deg)_rotateZ(-24deg)]" />
+              <div className="ambient-pulse absolute left-1/2 top-1/2 size-16 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/20 bg-[radial-gradient(circle_at_35%_30%,rgba(56,189,248,0.32),rgba(124,58,237,0.28),rgba(8,8,20,0.4))] shadow-[0_0_55px_rgba(124,58,237,0.25)] [transform:rotateX(24deg)_rotateY(-28deg)]" />
+            </div>
+            <div data-scroll-parallax className="absolute -bottom-24 -left-20 size-64 sm:bottom-[-5rem] sm:left-12 sm:size-80">
+              <div className="absolute inset-8 rounded-full border border-brand-purple/35 bg-[radial-gradient(circle_at_35%_35%,rgba(168,85,247,0.18),rgba(56,189,248,0.06)_45%,transparent_70%)] shadow-[0_0_90px_rgba(168,85,247,0.14)] [transform:perspective(800px)_rotateX(68deg)_rotateZ(-28deg)]" />
+              <div className="absolute inset-14 rounded-full border border-dashed border-brand-cyan/35 [transform:perspective(800px)_rotateX(68deg)_rotateZ(24deg)]" />
+              <span className="absolute left-1/2 top-1/2 size-3 rounded-full bg-brand-cyan shadow-[0_0_28px_8px_rgba(56,189,248,0.45)]" />
+            </div>
+            <div data-scroll-parallax className="absolute bottom-8 right-[22%] hidden size-20 sm:block">
+              <div className="absolute inset-2 rotate-45 rounded-xl border border-white/20 bg-[linear-gradient(145deg,rgba(56,189,248,0.16),rgba(124,58,237,0.2))] shadow-[0_0_35px_rgba(124,58,237,0.18)] [transform:perspective(500px)_rotateX(55deg)_rotateY(28deg)_rotateZ(45deg)]" />
+            </div>
+          </div>
+
+          <div className="relative z-10">
             <Badge className="mx-auto gap-2 border-brand-purple/30 bg-brand-purple/10 px-3 py-1.5 text-brand-purple">
               <ShieldCheck className="size-3.5" /> YOUR NEXT SESSION STARTS HERE
             </Badge>
