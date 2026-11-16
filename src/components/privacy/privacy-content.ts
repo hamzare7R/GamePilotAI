@@ -564,7 +564,7 @@ export const privacyContent: Record<PrivacyLocale, PrivacyContent> = {
             items: [
               { label: "Platform name", value: "GamePilotAI" },
               { label: "Website", value: "https://gamepilot-ai-nu.vercel.app/" },
-              { label: "Email", value: "[Contact email to be added]" },
+              { label: "Email", value: "[contact.7r.hamza@gmail.com]" },
             ],
           },
         ],
