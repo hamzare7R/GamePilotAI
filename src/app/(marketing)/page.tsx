@@ -1,337 +1,360 @@
+"use client";
+
 import Link from "next/link";
 import {
   Activity,
+  ArrowDown,
   ArrowRight,
+  AudioWaveform,
+  BrainCircuit,
   Check,
-  Clock,
+  ChevronRight,
+  CirclePlay,
   Gamepad2,
+  Layers3,
   LibraryBig,
+  Orbit,
   Play,
+  ShieldCheck,
   Sparkles,
   Target,
   Trophy,
   Zap,
 } from "lucide-react";
 
-import { SectionHeading } from "@/components/shared/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
-const previewLibrary = [
+const capabilities = [
   {
-    title: "Neon Drift",
-    meta: "PC · Racing",
-    progress: 72,
-    gradient: "from-fuchsia-500 to-violet-600",
-    tag: "Playing",
-  },
-  {
-    title: "Aetherfall",
-    meta: "PS5 · RPG",
-    progress: 43,
-    gradient: "from-sky-400 to-blue-600",
-    tag: "Backlog",
-  },
-  {
-    title: "Rift Legends",
-    meta: "Xbox · Shooter",
-    progress: 91,
-    gradient: "from-violet-500 to-indigo-600",
-    tag: "Ranked",
-  },
-];
-
-const features = [
-  {
-    icon: Sparkles,
-    title: "Adaptive AI coaching",
+    number: "01",
+    icon: BrainCircuit,
+    title: "A coach that gets your game",
     description:
-      "A coach that reads your sessions, finds the weak spots and gives you one clear next move — not a wall of stats.",
-    accent: "purple",
+      "Turn your play patterns into focused advice, practical routines and a clearer next move.",
+    detail: "AI COACH",
+    tone: "violet",
   },
   {
+    number: "02",
     icon: LibraryBig,
-    title: "One library, every platform",
+    title: "Your worlds, in one place",
     description:
-      "PC, console or cloud. Your games, progress and playtime live in a single, searchable command center.",
-    accent: "blue",
+      "Bring your games and gaming activity together in one library built around the way you play.",
+    detail: "UNIFIED LIBRARY",
+    tone: "cyan",
   },
   {
+    number: "03",
     icon: Activity,
-    title: "Insight, not noise",
+    title: "See the signal. Skip the noise.",
     description:
-      "Session trends, win-rate shifts and playtime balance are surfaced as plain-language signals you can act on.",
-    accent: "purple",
+      "Understand your sessions, spot patterns and make better decisions without drowning in stats.",
+    detail: "PLAYER INSIGHTS",
+    tone: "pink",
   },
 ];
 
-const steps = [
+const journey = [
   {
-    title: "Connect your platforms",
-    description: "Link the stores and launchers you already use. GamePilot builds your library automatically.",
+    step: "01",
+    title: "Bring your games",
+    text: "Start with your gaming library and the platforms you already use.",
+    icon: Layers3,
   },
   {
-    title: "Let the pilot analyze",
-    description: "Your sessions, achievements and play patterns become a personal performance profile.",
+    step: "02",
+    title: "Find your rhythm",
+    text: "Explore your activity and let your personal gaming picture take shape.",
+    icon: AudioWaveform,
   },
   {
-    title: "Play with a plan",
-    description: "Get a focused routine, build suggestions and recommendations for what to play next.",
+    step: "03",
+    title: "Make every session count",
+    text: "Use clear insights and coaching to decide what to work on next.",
+    icon: Target,
   },
+];
+
+const worlds = [
+  { name: "COMPETE", sub: "Sharpen your edge", icon: Trophy, color: "from-fuchsia-500 to-violet-500" },
+  { name: "DISCOVER", sub: "Find your next world", icon: Orbit, color: "from-cyan-400 to-blue-600" },
+  { name: "IMPROVE", sub: "Build your own meta", icon: Zap, color: "from-amber-300 to-orange-500" },
 ];
 
 export default function HomePage() {
   return (
-    <>
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent)]" />
-        <div className="pointer-events-none absolute -top-40 left-1/4 size-[420px] animate-pulse-glow rounded-full bg-brand-purple/20 blur-[130px]" />
-        <div className="pointer-events-none absolute top-24 -right-24 size-[380px] rounded-full bg-brand-cyan/15 blur-[130px]" />
+    <div className="relative isolate overflow-hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] bg-radial-glow opacity-90" />
 
-        <div className="relative mx-auto grid w-full max-w-7xl gap-14 px-4 pt-20 pb-24 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:px-8 lg:pt-28 lg:pb-32">
-          <div>
-            <Badge className="gap-1.5 border-primary/30 bg-primary/10 px-3 py-1">
-              <Sparkles className="size-3.5" />
-              AI-powered gaming companion
-            </Badge>
+      <section className="relative flex min-h-[760px] items-center overflow-hidden px-4 pb-24 pt-20 sm:px-6 lg:min-h-[820px] lg:px-8 lg:pt-16">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_88%)]" />
+        <div className="pointer-events-none absolute -left-48 top-32 -z-10 size-[520px] rounded-full bg-brand-purple/15 blur-[150px]" />
+        <div className="pointer-events-none absolute -right-48 top-20 -z-10 size-[560px] rounded-full bg-brand-cyan/10 blur-[160px]" />
 
-            <h1 className="mt-6 font-display text-4xl leading-[1.05] font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-              Play smarter.
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-4">
+          <div className="relative z-10 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.045] px-3.5 py-2 text-xs font-medium tracking-wide text-white/75 shadow-[0_0_35px_-15px_rgba(168,85,247,0.7)] backdrop-blur-xl">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand-cyan opacity-60" />
+                <span className="relative inline-flex size-2 rounded-full bg-brand-cyan" />
+              </span>
+              THE NEXT LEVEL OF PLAY
+              <span className="text-white/25">/</span>
+              <Sparkles className="size-3.5 text-brand-purple" />
+              AI POWERED
+            </div>
+
+            <h1 className="mt-8 max-w-[760px] font-display text-[clamp(3.5rem,8vw,6.8rem)] leading-[0.91] font-semibold tracking-[-0.075em] text-white">
+              Your game.
               <br />
-              <span className="text-gradient">Level up faster.</span>
+              <span className="text-gradient">Your evolution.</span>
             </h1>
 
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              GamePilot AI turns your play history into a personal co-pilot: one library, clear
-              performance signals and coaching that adapts to how you actually play.
+            <p className="mt-8 max-w-lg text-base leading-8 text-white/60 sm:text-lg">
+              Meet the command center for everything you play. Bring your library together,
+              understand your progress and find your next move with AI.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
+            <div className="mt-9 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="h-12 rounded-full px-6 text-sm shadow-[0_0_35px_-12px_rgba(168,85,247,0.8)]">
                 <Link href="/dashboard">
-                  Launch dashboard
-                  <ArrowRight />
+                  Enter GamePilot
+                  <ArrowRight className="ml-1 size-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="#features">Explore features</Link>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="h-12 rounded-full border-white/15 bg-white/[0.035] px-6 text-sm text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="#experience">
+                  <CirclePlay className="mr-1 size-4" />
+                  Explore the experience
+                </Link>
               </Button>
             </div>
 
-            <div className="mt-10 flex flex-wrap gap-x-7 gap-y-3 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
-                <Check className="size-4 text-primary" />
-                Unified game library
-              </span>
-              <span className="flex items-center gap-2">
-                <Check className="size-4 text-brand-cyan" />
-                Session-level insights
-              </span>
-              <span className="flex items-center gap-2">
-                <Check className="size-4 text-primary" />
-                Built for every platform
-              </span>
+            <div className="mt-12 flex flex-wrap gap-x-7 gap-y-3 border-t border-white/10 pt-6 text-xs tracking-wide text-white/45">
+              <span className="flex items-center gap-2"><Check className="size-3.5 text-brand-cyan" /> One connected library</span>
+              <span className="flex items-center gap-2"><Check className="size-3.5 text-brand-cyan" /> Personal AI insights</span>
+              <span className="flex items-center gap-2"><Check className="size-3.5 text-brand-cyan" /> Built for every player</span>
             </div>
           </div>
 
-          <HeroPreview />
+          <HeroWorld />
         </div>
+
+        <a
+          href="#experience"
+          className="absolute bottom-7 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[10px] tracking-[0.25em] text-white/35 uppercase transition-colors hover:text-white/75 lg:flex"
+        >
+          Scroll to explore
+          <ArrowDown className="size-4 animate-bounce" />
+        </a>
       </section>
 
-      <section id="features" className="scroll-mt-24 border-t border-border/60 bg-card/20 py-24">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            eyebrow="The system"
-            title="Your entire gaming life, under one roof"
-            description="Built as a companion, not another dashboard. Every layer of GamePilot is designed to make the next session better than the last."
-          />
+      <section id="experience" className="scroll-mt-24 border-y border-white/[0.07] bg-white/[0.018] px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-semibold tracking-[0.3em] text-brand-cyan uppercase">A new way to play</p>
+              <h2 className="mt-5 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.055em] text-white sm:text-6xl">
+                More than a library.
+                <br />
+                <span className="text-white/40">A world built around you.</span>
+              </h2>
+            </div>
+            <p className="max-w-sm pb-1 text-sm leading-7 text-white/45">
+              Less switching. Less guesswork. A more connected view of your gaming life,
+              designed to help you enjoy the journey and keep moving forward.
+            </p>
+          </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {features.map((feature) => {
-              const Icon = feature.icon;
-
+          <div className="mt-16 grid gap-4 lg:grid-cols-3">
+            {capabilities.map((item) => {
+              const Icon = item.icon;
+              const tone = item.tone === "cyan" ? "text-brand-cyan" : item.tone === "pink" ? "text-fuchsia-300" : "text-brand-purple";
+              const glow = item.tone === "cyan" ? "bg-brand-cyan/10" : item.tone === "pink" ? "bg-fuchsia-400/10" : "bg-brand-purple/10";
               return (
-                <Card
-                  key={feature.title}
-                  className="group relative overflow-hidden gap-0 py-6 transition-colors hover:border-primary/35"
-                >
-                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-brand opacity-0 transition-opacity group-hover:opacity-100" />
-                  <CardHeader className="gap-4">
-                    <span
-                      className={
-                        feature.accent === "blue"
-                          ? "flex size-11 items-center justify-center rounded-xl border border-brand-cyan/25 bg-brand-cyan/10 text-brand-cyan"
-                          : "flex size-11 items-center justify-center rounded-xl border border-primary/25 bg-primary/10 text-primary"
-                      }
-                    >
-                      <Icon className="size-5" />
-                    </span>
-                    <CardTitle>{feature.title}</CardTitle>
-                    <CardDescription className="leading-relaxed">{feature.description}</CardDescription>
-                  </CardHeader>
-                </Card>
+                <article key={item.number} className="group relative min-h-[330px] overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0b0b16] p-7 transition-all duration-500 hover:-translate-y-1 hover:border-white/20 sm:p-9">
+                  <div className={`pointer-events-none absolute -right-16 -top-16 size-52 rounded-full ${glow} blur-[70px] transition-all duration-500 group-hover:scale-125`} />
+                  <div className="relative flex h-full flex-col">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs text-white/30">{item.number} / 03</span>
+                      <Icon className={`size-5 ${tone}`} />
+                    </div>
+                    <div className="mt-14">
+                      <p className={`text-[10px] font-semibold tracking-[0.25em] ${tone}`}>{item.detail}</p>
+                      <h3 className="mt-4 max-w-xs font-display text-2xl leading-tight font-semibold tracking-tight text-white">{item.title}</h3>
+                      <p className="mt-4 max-w-sm text-sm leading-7 text-white/45">{item.description}</p>
+                    </div>
+                    <div className="mt-auto flex items-center gap-2 pt-8 text-xs text-white/35 transition-colors group-hover:text-white/75">
+                      Discover the system <ChevronRight className="size-3.5 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                </article>
               );
             })}
           </div>
         </div>
       </section>
 
-      <section id="how-it-works" className="scroll-mt-24 py-24">
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionHeading
-            eyebrow="How it works"
-            title="Three steps to a better session"
-            description="No spreadsheets, no manual tracking. Connect once and let the co-pilot keep the picture up to date."
-          />
+      <section className="relative overflow-hidden px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/10 blur-[150px]" />
+        <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.3em] text-brand-purple uppercase">Your next chapter</p>
+            <h2 className="mt-5 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.055em] text-white sm:text-6xl">
+              Every player has
+              <span className="text-gradient"> a different path.</span>
+            </h2>
+            <p className="mt-6 max-w-md text-sm leading-7 text-white/50 sm:text-base">
+              Whether you compete, explore or improve, GamePilot gives your gaming life a
+              place to connect — and gives you a clearer view of where to go next.
+            </p>
+            <Link href="/games" className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white transition-colors hover:text-brand-cyan">
+              Explore your games <ArrowRight className="size-4" />
+            </Link>
+          </div>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
-            {steps.map((step, index) => (
-              <div
-                key={step.title}
-                className="relative rounded-xl border border-border/70 bg-card/40 p-6"
-              >
-                <span className="font-display text-4xl font-semibold text-gradient">
-                  0{index + 1}
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  {step.description}
-                </p>
-              </div>
-            ))}
+          <div className="grid gap-3 sm:grid-cols-3">
+            {worlds.map((world, index) => {
+              const Icon = world.icon;
+              return (
+                <div key={world.name} className={`group relative flex min-h-[260px] flex-col justify-between overflow-hidden rounded-[1.5rem] border border-white/10 bg-[#0b0b16] p-6 transition-all duration-500 hover:-translate-y-2 hover:border-white/20 sm:min-h-[330px] ${index === 1 ? "sm:mt-12" : index === 2 ? "sm:mt-24" : ""}`}>
+                  <div className={`absolute -right-12 -top-12 size-40 rounded-full bg-gradient-to-br ${world.color} opacity-15 blur-2xl transition-opacity group-hover:opacity-35`} />
+                  <div className="relative flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-white/35">0{index + 1}</span>
+                    <Icon className="size-5 text-white/65" />
+                  </div>
+                  <div className="relative">
+                    <div className={`mb-5 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br ${world.color} text-white shadow-lg transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6`}>
+                      <Icon className="size-5" />
+                    </div>
+                    <h3 className="font-display text-lg font-semibold tracking-wide text-white">{world.name}</h3>
+                    <p className="mt-2 text-xs text-white/45">{world.sub}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      <section className="px-4 pb-24 sm:px-6 lg:px-8">
-        <div className="relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-primary/25 bg-gradient-brand-soft px-6 py-14 text-center sm:px-12">
-          <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_60%_80%_at_50%_50%,black,transparent)]" />
+      <section className="border-y border-white/[0.07] bg-white/[0.018] px-4 py-24 sm:px-6 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-12 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.3em] text-brand-cyan uppercase">The flight plan</p>
+              <h2 className="mt-5 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.055em] text-white sm:text-5xl">
+                From first launch
+                <br />
+                <span className="text-white/40">to your next level.</span>
+              </h2>
+              <p className="mt-5 max-w-sm text-sm leading-7 text-white/45">
+                Start simple. Build your picture over time. Keep your attention on the part
+                that matters most: the game.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {journey.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.step} className="group flex gap-5 rounded-2xl border border-white/10 bg-[#0b0b16]/80 p-5 transition-colors hover:border-brand-purple/40 sm:gap-7 sm:p-7">
+                    <span className="pt-1 font-mono text-xs text-brand-cyan/70">{item.step}</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-xl font-semibold text-white">{item.title}</h3>
+                      <p className="mt-2 max-w-lg text-sm leading-6 text-white/45">{item.text}</p>
+                    </div>
+                    <Icon className="mt-1 size-5 shrink-0 text-white/30 transition-colors group-hover:text-brand-purple" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
+        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b16] px-6 py-16 text-center sm:px-12 sm:py-24">
+          <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_65%_85%_at_50%_50%,black,transparent)]" />
+          <div className="pointer-events-none absolute left-1/2 top-0 -z-0 size-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/20 blur-[120px]" />
           <div className="relative">
-            <Badge variant="blue" className="mx-auto">
-              Foundation ready
+            <Badge className="mx-auto gap-2 border-brand-purple/30 bg-brand-purple/10 px-3 py-1.5 text-brand-purple">
+              <ShieldCheck className="size-3.5" /> YOUR NEXT SESSION STARTS HERE
             </Badge>
-            <h2 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-semibold sm:text-4xl">
-              Ready to take the <span className="text-gradient">pilot seat?</span>
+            <h2 className="mx-auto mt-7 max-w-3xl font-display text-4xl leading-[1.02] font-semibold tracking-[-0.06em] text-white sm:text-6xl">
+              Ready to play with
+              <span className="text-gradient"> purpose?</span>
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-              The shell, design system and data layer are in place. Open the command center and see
-              where your next season is heading.
+            <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-white/50 sm:text-base">
+              Step into a more connected gaming experience. Your library, your insights,
+              your next move — all in one place.
             </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Button asChild size="lg">
-                <Link href="/dashboard">
-                  Open command center
-                  <ArrowRight />
-                </Link>
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <Button asChild size="lg" className="h-12 rounded-full px-7">
+                <Link href="/dashboard">Launch GamePilot <ArrowRight className="ml-1 size-4" /></Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/api/health">Check API health</Link>
+              <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/15 bg-white/[0.035] px-7 text-white hover:bg-white/10 hover:text-white">
+                <Link href="/login">Sign in</Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
 
-function HeroPreview() {
+function HeroWorld() {
   return (
-    <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-      <div className="absolute -inset-6 rounded-3xl bg-gradient-brand opacity-15 blur-3xl" />
+    <div className="relative mx-auto flex min-h-[490px] w-full max-w-[680px] items-center justify-center sm:min-h-[600px] lg:min-h-[660px]">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 size-[380px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/20 blur-[100px] sm:size-[520px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 size-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand-purple/20 [transform:translate(-50%,-50%)_rotateX(68deg)] sm:size-[440px]" />
+      <div className="pointer-events-none absolute left-1/2 top-1/2 size-[360px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand-cyan/15 [transform:translate(-50%,-50%)_rotateX(68deg)_rotateZ(-28deg)] sm:size-[520px]" />
 
-      <div className="relative overflow-hidden rounded-2xl border border-border/80 bg-card/85 shadow-2xl backdrop-blur">
-        <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
-          <span className="size-2.5 rounded-full bg-destructive/70" />
-          <span className="size-2.5 rounded-full bg-amber-400/70" />
-          <span className="size-2.5 rounded-full bg-emerald-400/70" />
-          <span className="ml-auto font-mono text-[11px] text-muted-foreground/70">
-            gamepilot.app / command
-          </span>
-        </div>
+      <div className="relative aspect-square w-[min(100%,520px)] [perspective:1100px]">
+        <div className="absolute inset-[8%] rounded-full border border-white/10 bg-[radial-gradient(circle_at_35%_28%,rgba(168,85,247,0.22),rgba(9,9,20,0.1)_48%,rgba(56,189,248,0.12))] shadow-[inset_0_0_80px_rgba(168,85,247,0.12),0_0_100px_rgba(56,189,248,0.08)] [transform:rotateX(58deg)_rotateZ(-25deg)]" />
+        <div className="absolute inset-[17%] rounded-full border border-dashed border-brand-cyan/30 [transform:rotateX(66deg)_rotateZ(24deg)]" />
+        <div className="absolute inset-[25%] rounded-full border border-brand-purple/40 [transform:rotateX(64deg)_rotateZ(-35deg)]" />
 
-        <div className="space-y-4 p-4">
-          <div className="rounded-xl border border-primary/25 bg-gradient-brand-soft p-4">
-            <div className="flex items-center gap-2 text-xs font-medium text-primary">
-              <Sparkles className="size-3.5" />
-              AI COACH
-              <Badge variant="blue" className="ml-auto px-1.5 py-0 text-[10px]">
-                live
-              </Badge>
+        <div className="absolute left-1/2 top-1/2 flex size-[54%] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.5rem] border border-white/20 bg-[linear-gradient(145deg,rgba(35,22,67,0.94),rgba(10,15,31,0.96)_55%,rgba(10,34,49,0.9))] shadow-[0_35px_100px_-35px_rgba(124,58,237,0.75),inset_0_1px_0_rgba(255,255,255,0.18)] [transform:rotateX(12deg)_rotateY(-16deg)_rotateZ(-8deg)] transition-transform duration-700 hover:[transform:rotateX(4deg)_rotateY(-5deg)_rotateZ(-3deg)]">
+          <div className="absolute inset-3 rounded-[1.9rem] border border-white/[0.08]" />
+          <div className="relative flex flex-col items-center text-center">
+            <div className="relative flex size-24 items-center justify-center rounded-[1.8rem] border border-brand-cyan/30 bg-[radial-gradient(circle_at_35%_25%,rgba(56,189,248,0.28),rgba(124,58,237,0.16)_55%,rgba(8,8,20,0.7))] shadow-[0_0_50px_-15px_rgba(56,189,248,0.65)] sm:size-32">
+              <Gamepad2 className="size-12 text-white sm:size-16" strokeWidth={1.2} />
+              <span className="absolute -right-2 -top-2 flex size-7 items-center justify-center rounded-full border border-white/20 bg-[#111020] text-brand-cyan shadow-lg"><Sparkles className="size-3.5" /></span>
             </div>
-            <p className="mt-2 text-sm leading-relaxed text-foreground/90">
-              Your aim accuracy drops 12% after 90 minutes. Try a 70-minute ranked block, then a
-              break — your win rate climbs in the third match.
-            </p>
-            <div className="mt-3 flex items-center gap-3">
-              <Progress value={68} className="h-1.5 flex-1" />
-              <span className="font-mono text-[11px] text-muted-foreground">68%</span>
+            <p className="mt-7 font-mono text-[9px] tracking-[0.35em] text-brand-cyan/80 sm:text-[10px]">PLAYER SYSTEM ONLINE</p>
+            <p className="mt-2 font-display text-2xl font-semibold tracking-tight text-white sm:text-3xl">GAMEPILOT<span className="text-brand-cyan">AI</span></p>
+            <p className="mt-2 text-[10px] tracking-[0.2em] text-white/35 uppercase">Your gaming command center</p>
+            <div className="mt-6 flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5">
+              <span className="size-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
+              <span className="font-mono text-[9px] tracking-wider text-white/55">READY TO LAUNCH</span>
             </div>
           </div>
-
-          <div className="space-y-2">
-            {previewLibrary.map((game) => (
-              <div
-                key={game.title}
-                className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/40 p-2.5"
-              >
-                <span
-                  className={`flex size-9 shrink-0 items-center justify-center rounded-md bg-linear-to-br ${game.gradient} text-white`}
-                >
-                  <Gamepad2 className="size-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium">{game.title}</p>
-                    <span className="ml-auto text-[10px] text-muted-foreground">{game.tag}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground">{game.meta}</p>
-                </div>
-                <div className="w-16 shrink-0">
-                  <Progress value={game.progress} className="h-1" />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { icon: Clock, label: "This week", value: "14.2h" },
-              { icon: Trophy, label: "Season", value: "Diamond" },
-              { icon: Target, label: "Win rate", value: "61%" },
-            ].map((stat) => {
-              const Icon = stat.icon;
-
-              return (
-                <div
-                  key={stat.label}
-                  className="rounded-lg border border-border/60 bg-background/40 p-2.5 text-center"
-                >
-                  <Icon className="mx-auto size-3.5 text-brand-cyan" />
-                  <p className="mt-1.5 font-display text-sm font-semibold">{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-                </div>
-              );
-            })}
-          </div>
         </div>
-      </div>
 
-      <div className="absolute -bottom-10 -left-4 flex animate-float items-center gap-2 rounded-lg border border-brand-cyan/25 bg-background/90 px-3 py-2 shadow-glow-blue backdrop-blur">
-        <span className="flex size-7 items-center justify-center rounded-md bg-brand-cyan/10 text-brand-cyan">
-          <Zap className="size-3.5" />
-        </span>
-        <div>
-          <p className="text-[11px] text-muted-foreground">Session score</p>
-          <p className="text-xs font-semibold text-foreground">+18% this week</p>
+        <div className="absolute left-[2%] top-[23%] flex animate-float items-center gap-3 rounded-2xl border border-white/10 bg-[#10101c]/90 p-3 shadow-2xl backdrop-blur-xl sm:left-0 sm:p-4">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-purple/15 text-brand-purple"><BrainCircuit className="size-4" /></div>
+          <div><p className="text-[9px] tracking-widest text-white/35">AI COACH</p><p className="mt-1 text-xs font-medium text-white">Insight unlocked</p></div>
         </div>
-      </div>
 
-      <div className="absolute -top-4 -right-3 hidden items-center gap-2 rounded-lg border border-primary/25 bg-background/90 px-3 py-2 shadow-glow-purple backdrop-blur sm:flex">
-        <Play className="size-3.5 fill-primary text-primary" />
-        <span className="text-xs font-medium">3 games ready</span>
+        <div className="absolute right-[1%] top-[28%] flex animate-float items-center gap-3 rounded-2xl border border-white/10 bg-[#10101c]/90 p-3 shadow-2xl backdrop-blur-xl [animation-delay:1.2s] sm:right-0 sm:p-4">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-brand-cyan/15 text-brand-cyan"><LibraryBig className="size-4" /></div>
+          <div><p className="text-[9px] tracking-widest text-white/35">YOUR LIBRARY</p><p className="mt-1 text-xs font-medium text-white">All games connected</p></div>
+        </div>
+
+        <div className="absolute bottom-[12%] left-[8%] flex animate-float items-center gap-3 rounded-2xl border border-white/10 bg-[#10101c]/90 p-3 shadow-2xl backdrop-blur-xl [animation-delay:2.1s] sm:bottom-[10%] sm:left-[6%] sm:p-4">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><Trophy className="size-4" /></div>
+          <div><p className="text-[9px] tracking-widest text-white/35">PLAYER PROGRESS</p><p className="mt-1 text-xs font-medium text-white">Your next level awaits</p></div>
+        </div>
+
+        <div className="absolute bottom-[15%] right-[5%] hidden items-center gap-2 rounded-full border border-white/10 bg-[#10101c]/90 px-4 py-2 text-[10px] text-white/60 shadow-2xl backdrop-blur-xl sm:flex">
+          <Play className="size-3 fill-brand-cyan text-brand-cyan" /> YOUR NEXT SESSION
+        </div>
       </div>
     </div>
   );
