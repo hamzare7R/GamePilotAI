@@ -182,13 +182,33 @@ export default function HomePage() {
           transition: transform 340ms cubic-bezier(.2,.7,.2,1);
           will-change: transform;
         }
+        [data-home-motion] .ambient-orbit {
+          animation: ambient-orbit-turn 28s linear infinite;
+          transform-origin: center;
+        }
+        [data-home-motion] .ambient-pulse {
+          animation: ambient-pulse 5s ease-in-out infinite;
+        }
+        @keyframes ambient-orbit-turn {
+          from { rotate: 0deg; }
+          to { rotate: 360deg; }
+        }
+        @keyframes ambient-pulse {
+          0%, 100% { opacity: .45; scale: .96; }
+          50% { opacity: .9; scale: 1.04; }
+        }
         @media (prefers-reduced-motion: reduce) {
           [data-home-motion] [data-scroll-reveal],
           [data-home-motion] [data-scroll-parallax],
           [data-home-motion] .ambient-orb,
-          [data-home-motion] .ambient-orb-core {
+          [data-home-motion] .ambient-orb-core,
+          [data-home-motion] .ambient-orbit,
+          [data-home-motion] .ambient-pulse {
             opacity: 1 !important;
             transform: none !important;
+            rotate: none !important;
+            scale: none !important;
+            animation: none !important;
             transition: none !important;
             will-change: auto;
           }
@@ -196,14 +216,23 @@ export default function HomePage() {
       `}</style>
       <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[900px] bg-radial-glow opacity-90" />
 
-      {/* Interactive ambient object: reacts subtly to page scroll and pointer movement. */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[8vh] -z-10 h-[150vh] overflow-hidden">
-        <div className="ambient-orb absolute right-[-18rem] top-[8rem] size-[38rem] rounded-full border border-brand-purple/20 bg-[radial-gradient(circle_at_35%_30%,rgba(168,85,247,0.18),rgba(56,189,248,0.07)_38%,transparent_68%)] shadow-[inset_0_0_90px_rgba(168,85,247,0.12),0_0_100px_rgba(56,189,248,0.08)] blur-[1px] sm:right-[-12rem] sm:size-[48rem]">
-          <div className="absolute inset-[12%] rounded-full border border-dashed border-brand-cyan/20" />
-          <div className="absolute inset-[27%] rounded-full border border-brand-purple/25" />
-          <div className="ambient-orb-core absolute left-[38%] top-[35%] size-[24%] rounded-[2rem] border border-white/15 bg-[linear-gradient(145deg,rgba(56,189,248,0.16),rgba(124,58,237,0.2),rgba(10,10,25,0.25))] shadow-[0_0_80px_rgba(124,58,237,0.2)] backdrop-blur-sm" />
+      {/* Interactive ambient portal: a luminous 3D energy core that follows scroll and pointer movement. */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-[4vh] -z-10 h-[175vh] overflow-hidden">
+        <div className="ambient-orb absolute right-[-21rem] top-[5rem] size-[42rem] rounded-full border border-brand-purple/30 bg-[radial-gradient(circle_at_42%_38%,rgba(168,85,247,0.24),rgba(56,189,248,0.12)_34%,rgba(10,10,25,0.02)_68%)] shadow-[inset_0_0_110px_rgba(168,85,247,0.2),0_0_130px_rgba(56,189,248,0.13)] sm:right-[-14rem] sm:size-[56rem]">
+          <div className="ambient-orbit absolute inset-[8%] rounded-full border border-dashed border-brand-cyan/35 shadow-[0_0_35px_rgba(56,189,248,0.08)]" />
+          <div className="ambient-orbit absolute inset-[19%] rounded-full border border-brand-purple/35 [animation-direction:reverse] [animation-duration:36s]" />
+          <div className="absolute inset-[30%] rounded-full border border-white/10 shadow-[inset_0_0_55px_rgba(168,85,247,0.12)]" />
+          <div className="ambient-pulse absolute left-[29%] top-[27%] size-[42%] rounded-full bg-[radial-gradient(circle,rgba(168,85,247,0.28),rgba(56,189,248,0.12)_42%,transparent_72%)] blur-2xl" />
+          <div className="ambient-orb-core absolute left-[39%] top-[35%] size-[24%] rounded-[2.5rem] border border-white/25 bg-[linear-gradient(145deg,rgba(56,189,248,0.25),rgba(124,58,237,0.32)_48%,rgba(10,10,25,0.55))] shadow-[0_0_95px_rgba(124,58,237,0.32),inset_0_1px_0_rgba(255,255,255,0.28)] backdrop-blur-md">
+            <div className="absolute inset-[12%] rounded-[1.8rem] border border-white/15" />
+            <div className="ambient-pulse absolute -right-3 -top-3 size-7 rounded-full border border-brand-cyan/50 bg-brand-cyan/20 shadow-[0_0_30px_rgba(56,189,248,0.55)]" />
+          </div>
+          <span className="absolute left-[17%] top-[48%] size-2 rounded-full bg-brand-cyan shadow-[0_0_22px_5px_rgba(56,189,248,0.65)]" />
+          <span className="ambient-pulse absolute right-[18%] top-[24%] size-3 rounded-full bg-brand-purple shadow-[0_0_26px_6px_rgba(168,85,247,0.7)]" />
+          <span className="absolute bottom-[18%] right-[34%] size-1.5 rounded-full bg-white shadow-[0_0_18px_4px_rgba(255,255,255,0.6)]" />
         </div>
-        <div className="absolute left-[-18rem] top-[55%] size-[28rem] rounded-full bg-brand-cyan/[0.045] blur-[100px]" />
+        <div className="absolute left-[-18rem] top-[55%] size-[32rem] rounded-full bg-brand-cyan/[0.075] blur-[110px]" />
+        <div className="absolute right-[12%] top-[78%] size-[24rem] rounded-full bg-brand-purple/[0.07] blur-[110px]" />
       </div>
 
       <section className="relative flex min-h-[760px] items-center overflow-hidden px-4 pb-24 pt-20 sm:px-6 lg:min-h-[820px] lg:px-8 lg:pt-16">
