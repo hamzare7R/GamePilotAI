@@ -353,7 +353,7 @@ export const termsContent: Record<TermsLocale, TermsContent> = {
             items: [
               { label: "Plattformname", value: "GamePilotAI" },
               { label: "Website", value: "https://gamepilot-ai-nu.vercel.app/" },
-              { label: "E-Mail", value: "[Kontakt-E-Mail wird noch ergänzt]" },
+              { label: "E-Mail", value: "[contact.7r.hamza@gmail.com]" },
             ],
           },
         ],
@@ -685,7 +685,7 @@ export const termsContent: Record<TermsLocale, TermsContent> = {
             items: [
               { label: "Platform name", value: "GamePilotAI" },
               { label: "Website", value: "https://gamepilot-ai-nu.vercel.app/" },
-              { label: "Email", value: "[Contact email to be added]" },
+              { label: "Email", value: "[contact.7r.hamza@gmail.com]" },
             ],
           },
         ],
