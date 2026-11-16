@@ -6,6 +6,9 @@ export type ServiceKey =
   | "playstation"
   | "xbox"
   | "riot"
+  | "linkedin"
+  | "tiktok"
+  | "temu"
   | "other";
 
 export type MessageCategory =
@@ -25,8 +28,7 @@ export type ServiceDefinition = {
 
 /**
  * Domain based mapping. Only registrable service domains are listed, and
- * matching is done on a dot boundary so "evil-google.com" never matches
- * "google.com".
+ * matching is done on a dot boundary so lookalike domains do not match.
  */
 export const SERVICE_DEFINITIONS: readonly ServiceDefinition[] = [
   {
@@ -71,6 +73,24 @@ export const SERVICE_DEFINITIONS: readonly ServiceDefinition[] = [
     domains: ["riotgames.com", "leagueoflegends.com", "valorant.com"],
     defaultCategory: "general_notification",
   },
+  {
+    key: "linkedin",
+    label: "LinkedIn",
+    domains: ["linkedin.com"],
+    defaultCategory: "account_alert",
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    domains: ["tiktok.com"],
+    defaultCategory: "general_notification",
+  },
+  {
+    key: "temu",
+    label: "Temu",
+    domains: ["temu.com", "temuemail.com"],
+    defaultCategory: "general_notification",
+  },
 ];
 
 export const CATEGORY_LABELS: Record<MessageCategory, string> = {
@@ -90,5 +110,8 @@ export const SERVICE_LABELS: Record<ServiceKey, string> = {
   playstation: "PlayStation",
   xbox: "Xbox",
   riot: "Riot Games",
+  linkedin: "LinkedIn",
+  tiktok: "TikTok",
+  temu: "Temu",
   other: "Other services",
 };
