@@ -426,10 +426,7 @@ export default function HomePage() {
       </section>
 
       <section className="px-4 py-24 sm:px-6 lg:px-8 lg:py-32">
-        <div data-scroll-reveal className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0b16] px-6 py-16 text-center sm:px-12 sm:py-24">
-          <div className="pointer-events-none absolute inset-0 bg-grid opacity-40 [mask-image:radial-gradient(ellipse_65%_85%_at_50%_50%,black,transparent)]" />
-          <div className="pointer-events-none absolute left-1/2 top-0 -z-0 size-[440px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-purple/20 blur-[120px]" />
-
+        <div data-scroll-reveal className="relative mx-auto max-w-6xl px-6 py-16 text-center sm:px-12 sm:py-24">
           <div className="relative">
             <Badge className="mx-auto gap-2 border-brand-purple/30 bg-brand-purple/10 px-3 py-1.5 text-brand-purple">
               <ShieldCheck className="size-3.5" /> YOUR NEXT SESSION STARTS HERE
