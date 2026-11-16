@@ -30,6 +30,46 @@ function subscriptionMatches(expected: string, received: string) {
 }
 
 /**
+ * Decodes and validates the Base64URL payload inside a Pub/Sub push message.
+ * Kept separate from `verifyPubSubPush` so it can be unit tested without a
+ * real Google-signed OIDC token.
+ */
+export function parsePubSubPayload(data: string): { emailAddress: string; historyId: string } {
+  let decoded: unknown;
+  try {
+    decoded = JSON.parse(Buffer.from(data, "base64url").toString("utf8"));
+  } catch {
+    console.warn("[gmail:pubsub] payload rejected: data is not valid Base64URL JSON");
+    throw new PubSubVerificationError("Pub/Sub payload is not valid JSON.", "PAYLOAD_INVALID");
+  }
+
+  if (typeof decoded !== "object" || decoded === null || Array.isArray(decoded)) {
+    console.warn("[gmail:pubsub] payload rejected: decoded payload is not an object");
+    throw new PubSubVerificationError("Pub/Sub payload is not a valid object.", "PAYLOAD_INVALID");
+  }
+
+  const payload = decoded as { emailAddress?: unknown; historyId?: unknown };
+  if (typeof payload.emailAddress !== "string") {
+    console.warn("[gmail:pubsub] payload rejected: emailAddress has invalid type", {
+      type: typeof payload.emailAddress,
+    });
+    throw new PubSubVerificationError("Pub/Sub payload is missing emailAddress or historyId.", "PAYLOAD_INVALID");
+  }
+
+  if (typeof payload.historyId !== "string" || !payload.historyId) {
+    console.warn("[gmail:pubsub] payload rejected: historyId has invalid type or is empty", {
+      type: typeof payload.historyId,
+    });
+    throw new PubSubVerificationError("Pub/Sub payload is missing emailAddress or historyId.", "PAYLOAD_INVALID");
+  }
+
+  return {
+    emailAddress: payload.emailAddress.trim().toLowerCase(),
+    historyId: payload.historyId,
+  };
+}
+
+/**
  * Verifies a Pub/Sub push request end to end:
  * 1. Google-signed OIDC bearer token (issuer, audience, signature via JWKS).
  * 2. The signing service account.
@@ -78,21 +118,11 @@ export async function verifyPubSubPush(request: Request): Promise<PubSubNotifica
     throw new PubSubVerificationError("Pub/Sub message came from an unexpected subscription.", "SUBSCRIPTION_MISMATCH");
   }
 
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(Buffer.from(body.message.data, "base64").toString("utf8"));
-  } catch {
-    throw new PubSubVerificationError("Pub/Sub payload is not valid JSON.", "PAYLOAD_INVALID");
-  }
-
-  const data = decoded as { emailAddress?: unknown; historyId?: unknown };
-  if (typeof data.emailAddress !== "string" || typeof data.historyId !== "string" || !data.historyId) {
-    throw new PubSubVerificationError("Pub/Sub payload is missing emailAddress or historyId.", "PAYLOAD_INVALID");
-  }
+  const { emailAddress, historyId } = parsePubSubPayload(body.message.data);
 
   return {
-    emailAddress: data.emailAddress.trim().toLowerCase(),
-    historyId: data.historyId,
+    emailAddress,
+    historyId,
     messageId: body.message.messageId,
   };
 }
