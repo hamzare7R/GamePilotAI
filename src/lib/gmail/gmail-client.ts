@@ -3,12 +3,14 @@ const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1";
 export class GmailRequestError extends Error {
   readonly code: string;
   readonly status: number;
+  readonly reason?: string;
 
-  constructor(message: string, code: string, status: number) {
+  constructor(message: string, code: string, status: number, reason?: string) {
     super(message);
     this.name = "GmailRequestError";
     this.code = code;
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -46,6 +48,18 @@ async function gmailFetch({ accessToken, path, method = "GET", body }: FetchOpti
     if (response.ok) return response;
     if (response.status === 404) {
       throw new GmailRequestError("Gmail resource not found.", "NOT_FOUND", 404);
+    }
+    if (response.status === 401 || response.status === 403) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: { status?: string; message?: string; errors?: Array<{ reason?: string }> } }
+        | null;
+      const reason = payload?.error?.errors?.[0]?.reason ?? payload?.error?.status ?? "UNKNOWN";
+      throw new GmailRequestError(
+        `Gmail authorization failed (${response.status}).`,
+        "GMAIL_AUTHORIZATION_FAILED",
+        response.status,
+        reason,
+      );
     }
     if ((response.status === 429 || response.status >= 500) && attempt < 2) {
       await new Promise((resolve) => setTimeout(resolve, 600 * (attempt + 1)));
