@@ -149,9 +149,8 @@ export async function removeConnectionForUser(userId: string) {
   try {
     await client.query("BEGIN");
 
-    // Disconnecting Gmail resets the user's Mail Monitor view. Remove all
-    // Gmail-derived metadata and aggregates so the next connection starts
-    // clean and repopulates only from the newly connected Gmail account.
+    // Preserve all previously imported mail and attachments. Disconnect only
+    // revokes access and clears the stored OAuth credential.
     const connection = await client.query<{ id: string; email_address: string; encrypted_refresh_token: string }>(
       `SELECT id, email_address, encrypted_refresh_token
          FROM gmail_connections
@@ -166,10 +165,16 @@ export async function removeConnectionForUser(userId: string) {
       return null;
     }
 
-    await client.query("DELETE FROM gmail_sync_events WHERE connection_id = $1", [row.id]);
-    await client.query("DELETE FROM gmail_notifications WHERE user_id = $1", [userId]);
-    await client.query("DELETE FROM connected_services WHERE user_id = $1", [userId]);
-    await client.query("DELETE FROM gmail_connections WHERE id = $1", [row.id]);
+    await client.query(
+      `UPDATE gmail_connections
+          SET connection_status = 'revoked',
+              encrypted_refresh_token = '',
+              history_id = NULL,
+              watch_expiration = NULL,
+              updated_at = now()
+        WHERE id = $1`,
+      [row.id],
+    );
 
     await client.query("COMMIT");
     return { emailAddress: row.email_address, encryptedRefreshToken: row.encrypted_refresh_token };
