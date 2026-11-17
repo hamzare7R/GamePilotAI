@@ -27,6 +27,7 @@ const FLASH: Record<string, { tone: "success" | "warning" | "error"; message: st
   },
   denied: { tone: "warning", message: "Google authorization was cancelled." },
   invalid_state: { tone: "error", message: "The connection request expired or was tampered with. Try again." },
+  scope_missing: { tone: "error", message: "Google did not grant the Gmail read-only permission. Please reconnect and approve the requested access." },
   no_refresh_token: {
     tone: "error",
     message: "Google did not grant offline access. Remove GamePilot from your Google permissions, then retry.",
@@ -83,7 +84,7 @@ export function GmailAccountCard({
               Gmail connection
             </CardTitle>
             <CardDescription>
-              Metadata-only access. Message bodies, subjects and verification codes are never fetched.
+              Read-only Gmail access. Mail Monitor fetches the selected message when you open it; message content is not stored in GamePilotAI.
             </CardDescription>
           </div>
           {connection ? (
