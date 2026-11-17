@@ -42,7 +42,7 @@ export function SyncStatus({
         headers: { "Content-Type": "application/json" },
       });
       const payload = (await response.json().catch(() => null)) as {
-        data?: { status?: string; processed?: number; skipped?: number; errorCode?: string };
+        data?: { status?: string; processed?: number; skipped?: number; queued?: boolean; errorCode?: string };
         error?: { message?: string; code?: string };
       } | null;
 
@@ -65,7 +65,9 @@ export function SyncStatus({
       }
 
       setFeedback(
-        `Sync completed. ${result.processed ?? 0} new notifications processed; stored sender metadata was rechecked.`,
+        result.queued
+          ? `Batch saved: ${result.processed ?? 0} messages. More messages are waiting; click Sync now again in a few seconds to continue.`
+          : `Sync completed. ${result.processed ?? 0} messages saved with their content and attachments.`,
       );
       router.refresh();
     } catch {
