@@ -52,11 +52,12 @@ export function SyncStatus({
         return;
       }
 
-      if (payload?.data?.status !== "ok") {
+      const result = payload?.data;
+      if (!result || result.status !== "ok") {
         setFeedbackError(true);
         setFeedback(
-          payload?.data?.errorCode
-            ? `Gmail sync failed: ${payload.data.errorCode}`
+          result?.errorCode
+            ? `Gmail sync failed: ${result.errorCode}`
             : "Gmail sync did not complete successfully.",
         );
         router.refresh();
@@ -64,7 +65,7 @@ export function SyncStatus({
       }
 
       setFeedback(
-        `Sync completed. ${payload.data.processed ?? 0} new notifications processed; stored sender metadata was rechecked.`,
+        `Sync completed. ${result.processed ?? 0} new notifications processed; stored sender metadata was rechecked.`,
       );
       router.refresh();
     } catch {
