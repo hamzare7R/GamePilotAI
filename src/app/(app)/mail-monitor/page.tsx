@@ -1,11 +1,13 @@
 import { redirect } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { Activity, ShieldCheck } from "lucide-react";
 
 import { ConnectedServices } from "@/components/mail-monitor/connected-services";
 import { GmailAccountCard } from "@/components/mail-monitor/gmail-account-card";
+import { MailQuickActions } from "@/components/mail-monitor/quick-actions";
 import { MailStatistics } from "@/components/mail-monitor/mail-statistics";
 import { NotificationList } from "@/components/mail-monitor/notification-list";
 import { SyncStatus } from "@/components/mail-monitor/sync-status";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { isGmailConfigured } from "@/lib/gmail/env";
 import { getSessionUser } from "@/server/auth/user";
@@ -55,20 +57,32 @@ export default async function MailMonitorPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-      <header>
-        <p className="text-sm text-muted-foreground">Integrations</p>
-        <h1 className="font-display text-2xl font-semibold sm:text-3xl">Mail Monitor</h1>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Detect security and account notifications from the services you use. GamePilot reads sender metadata only —
-          never message bodies, subjects or verification codes.
-        </p>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="flex items-center gap-2 text-sm font-medium text-primary">
+            <Activity className="size-4" aria-hidden="true" />
+            Integrations / Email security
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Mail Monitor</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            One clear place to monitor account alerts and security activity from your connected services.
+            GamePilot reads sender metadata only — never message bodies, subjects or verification codes.
+          </p>
+        </div>
+        <Badge
+          variant={data?.connection?.status === "active" ? "success" : "outline"}
+          className="mt-1 gap-1.5 px-3 py-1.5"
+        >
+          <span className={data?.connection?.status === "active" ? "size-1.5 rounded-full bg-emerald-400" : "size-1.5 rounded-full bg-muted-foreground"} />
+          {data?.connection?.status === "active" ? "Monitoring active" : data?.connection ? "Needs attention" : "Not connected"}
+        </Badge>
       </header>
 
       {!data ? (
         <Card>
           <CardContent className="flex items-start gap-3 px-6 text-sm">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden="true" />
+            <ShieldCheck className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden="true" />
             <div>
               <p className="font-medium">Mail Monitor data is temporarily unavailable.</p>
               <p className="mt-1 text-muted-foreground">
@@ -81,7 +95,7 @@ export default async function MailMonitorPage({
         <>
           <MailStatistics summary={data.summary} />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <section aria-label="Email connection and connected services" className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
             <GmailAccountCard
               configured={configured}
               flash={flash}
@@ -97,10 +111,15 @@ export default async function MailMonitorPage({
               }
             />
             <ConnectedServices services={data.services} />
-          </div>
+          </section>
 
-          <NotificationList notifications={data.notifications} />
-          <SyncStatus connection={data.connection} events={data.events} configured={configured} />
+          <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.75fr)]">
+            <NotificationList notifications={data.notifications} />
+            <div className="flex flex-col gap-4">
+              <MailQuickActions notifications={data.notifications} />
+              <SyncStatus connection={data.connection} events={data.events} configured={configured} />
+            </div>
+          </section>
         </>
       )}
     </div>
