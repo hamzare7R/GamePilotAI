@@ -14,6 +14,7 @@ import type { PubSubNotification } from "./pubsub-verification";
 import {
   fetchMailboxHistoryId,
   getMessageMetadata,
+  getMessageContent,
   HistoryExpiredError,
   listInboxHistory,
   listRecentInboxMessageIds,
@@ -82,14 +83,18 @@ export async function syncConnection(
 
     for (const messageId of messageIds.slice(0, MAX_MESSAGES_PER_SYNC)) {
       let metadata: Awaited<ReturnType<typeof getMessageMetadata>>;
+      let content: Awaited<ReturnType<typeof getMessageContent>>;
       try {
-        metadata = await getMessageMetadata(accessToken, messageId);
+        [metadata, content] = await Promise.all([
+          getMessageMetadata(accessToken, messageId),
+          getMessageContent(accessToken, messageId),
+        ]);
       } catch {
         skipped += 1;
         continue;
       }
 
-      const sender = parseSenderAddress(metadata.headers.from);
+      const sender = parseSenderAddress(metadata.headers.from ?? content.headers.from);
       if (!sender) {
         skipped += 1;
         continue;
@@ -104,7 +109,13 @@ export async function syncConnection(
         senderAddress: sender.senderAddress,
         serviceName: match.service,
         messageCategory: match.category,
-        receivedAt: parseHeaderDate(metadata.headers.date),
+        receivedAt: parseHeaderDate(metadata.headers.date ?? content.headers.date),
+        subject: content.headers.subject ?? "",
+        recipient: content.headers.to ?? "",
+        bodyText: content.bodyText,
+        snippet: content.snippet,
+        headers: content.headers,
+        attachments: content.attachments,
       });
 
       if (inserted) processed += 1;
