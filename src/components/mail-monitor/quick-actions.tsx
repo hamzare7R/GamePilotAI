@@ -27,11 +27,11 @@ export function MailQuickActions({ notifications }: { notifications: ExportNotif
       item.serviceName,
       item.senderDomain,
       item.messageCategory,
-      item.receivedAt ? new Date(item.receivedAt).toISOString() : "",
+      item.receivedAt ? item.receivedAt.toISOString() : "",
       item.processingStatus,
     ]);
     const csv = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
-    const blob = new Blob(["\\uFEFF", csv], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
