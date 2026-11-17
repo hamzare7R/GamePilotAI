@@ -232,6 +232,71 @@ export async function claimPubSubMessage(connectionId: string | null, messageId:
   return result.rows[0]?.id ?? null;
 }
 
+export async function enqueueSyncMessages(
+  input: { userId: string; connectionId: string; messageIds: string[]; historyId: string | null },
+) {
+  await ensureMailSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    for (const messageId of input.messageIds) {
+      await client.query(
+        `INSERT INTO gmail_sync_queue (id, user_id, connection_id, gmail_message_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (connection_id, gmail_message_id) DO NOTHING`,
+        [randomUUID(), input.userId, input.connectionId, messageId],
+      );
+    }
+    // Advancing history is safe because every discovered message is now durable in the queue.
+    await client.query(
+      `UPDATE gmail_connections
+          SET history_id = COALESCE($2, history_id), updated_at = now()
+        WHERE id = $1 AND user_id = $3`,
+      [input.connectionId, input.historyId, input.userId],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function listPendingSyncMessages(connectionId: string, limit = 40) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ gmail_message_id: string }>(
+    `SELECT gmail_message_id
+       FROM gmail_sync_queue
+      WHERE connection_id = $1
+      ORDER BY created_at ASC
+      LIMIT $2`,
+    [connectionId, Math.min(Math.max(limit, 1), 100)],
+  );
+  return result.rows.map((row) => row.gmail_message_id);
+}
+
+export async function removePendingSyncMessage(connectionId: string, gmailMessageId: string) {
+  await ensureMailSchema();
+  await getPool().query(
+    "DELETE FROM gmail_sync_queue WHERE connection_id = $1 AND gmail_message_id = $2",
+    [connectionId, gmailMessageId],
+  );
+}
+
+export async function completeSyncQueue(connectionId: string, historyId: string | null) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ pending: boolean }>(
+    "SELECT EXISTS (SELECT 1 FROM gmail_sync_queue WHERE connection_id = $1) AS pending",
+    [connectionId],
+  );
+  const pending = result.rows[0]?.pending ?? false;
+  if (!pending) {
+    await updateConnectionSync(connectionId, historyId);
+  }
+  return { complete: !pending };
+}
+
 export async function insertNotification(input: {
   userId: string;
   connectionId: string;
