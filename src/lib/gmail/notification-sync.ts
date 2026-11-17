@@ -1,5 +1,9 @@
 import {
   claimPubSubMessage,
+  enqueueSyncMessages,
+  listPendingSyncMessages,
+  removePendingSyncMessage,
+  completeSyncQueue,
   getConnectionByEmail,
   insertNotification,
   recordSyncEvent,
@@ -77,20 +81,32 @@ export async function syncConnection(
       options.fullResync ?? false,
     );
 
+    // Queue every discovered ID before advancing Gmail history. This lets a
+    // large initial import continue in safe, bounded batches without losing IDs.
+    await enqueueSyncMessages({
+      userId: connection.userId,
+      connectionId: connection.id,
+      messageIds,
+      historyId,
+    });
+
     let processed = 0;
     let skipped = 0;
+    const pendingIds = await listPendingSyncMessages(connection.id, MAX_MESSAGES_PER_SYNC);
 
-    for (const messageId of messageIds.slice(0, MAX_MESSAGES_PER_SYNC)) {
+    for (const messageId of pendingIds) {
       let content: Awaited<ReturnType<typeof getMessageContent>>;
       try {
         content = await getMessageContent(accessToken, messageId);
       } catch {
+        // Keep transient failures queued so a later sync can retry them.
         skipped += 1;
-        continue;
+        break;
       }
 
       const sender = parseSenderAddress(content.headers.from);
       if (!sender) {
+        await removePendingSyncMessage(connection.id, messageId);
         skipped += 1;
         continue;
       }
@@ -112,17 +128,17 @@ export async function syncConnection(
         headers: content.headers,
         attachments: content.attachments,
       });
+      await removePendingSyncMessage(connection.id, messageId);
 
       if (inserted) processed += 1;
       else skipped += 1;
     }
 
+    const queue = await completeSyncQueue(connection.id, historyId);
     await reclassifyStoredNotifications(connection.userId);
-
-    await updateConnectionSync(connection.id, historyId);
     await recordSyncEvent({ connectionId: connection.id, eventType: "sync", status: "success" });
 
-    return { status: "ok", processed, skipped };
+    return { status: "ok", processed, skipped, ...(queue.complete ? {} : { queued: true }) };
   } catch (error) {
     const code = safeErrorCode(error);
     const status: ConnectionStatus = AUTH_ERROR_CODES.has(code) ? "error" : "active";
