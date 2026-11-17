@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Download, Eye, RefreshCw, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,8 +18,6 @@ function csvCell(value: string) {
 }
 
 export function MailQuickActions({ notifications }: { notifications: ExportNotification[] }) {
-  const router = useRouter();
-
   function exportNotifications() {
     const header = ["Service", "Sender domain", "Category", "Received at", "Status"];
     const rows = notifications.map((item) => [
@@ -47,7 +44,7 @@ export function MailQuickActions({ notifications }: { notifications: ExportNotif
         <CardDescription>Common tasks, one click away.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2 sm:grid-cols-3 xl:grid-cols-1">
-        <Button variant="secondary" className="justify-start" onClick={() => router.refresh()}>
+        <Button type="button" variant="secondary" className="justify-start" onClick={() => window.location.reload()}>
           <RefreshCw aria-hidden="true" />
           Refresh dashboard
         </Button>
