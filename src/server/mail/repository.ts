@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { getPool } from "@/server/db/pool";
+import { identifyService } from "@/lib/gmail/service-identifier";
 
 import { ensureMailSchema } from "./schema";
 import type {
@@ -244,6 +245,71 @@ export async function insertNotification(input: {  userId: string;
 
     await client.query("COMMIT");
     return inserted.rowCount === 1;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Reclassifies previously stored metadata with the current curated service
+ * registry. No Gmail API request or message-content access is performed.
+ */
+export async function reclassifyStoredNotifications(userId: string) {
+  await ensureMailSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const rows = await client.query<{
+      id: string;
+      sender_address: string;
+      sender_domain: string;
+      service_name: string;
+      message_category: string;
+      received_at: Date | null;
+      created_at: Date;
+    }>(
+      `SELECT id, sender_address, sender_domain, service_name, message_category, received_at, created_at
+         FROM gmail_notifications
+        WHERE user_id = $1`,
+      [userId],
+    );
+
+    let changed = 0;
+    for (const row of rows.rows) {
+      const match = identifyService(row.sender_address, row.sender_domain);
+      if (row.service_name === match.service && row.message_category === match.category) continue;
+      await client.query(
+        `UPDATE gmail_notifications
+            SET service_name = $2, message_category = $3
+          WHERE id = $1`,
+        [row.id, match.service, match.category],
+      );
+      changed += 1;
+    }
+
+    // Rebuild per-user aggregates so services renamed by the registry are
+    // reflected accurately and notification counts remain consistent.
+    await client.query("DELETE FROM connected_services WHERE user_id = $1", [userId]);
+    await client.query(
+      `INSERT INTO connected_services
+         (id, user_id, service_name, first_detected_at, last_detected_at, notification_count)
+       SELECT md5($1 || ':' || service_name || ':' || count(*)::text),
+              $1,
+              service_name,
+              min(COALESCE(received_at, created_at)),
+              max(COALESCE(received_at, created_at)),
+              count(*)::int
+         FROM gmail_notifications
+        WHERE user_id = $1
+        GROUP BY service_name`,
+      [userId],
+    );
+
+    await client.query("COMMIT");
+    return { scanned: rows.rowCount ?? rows.rows.length, changed };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
