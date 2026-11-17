@@ -202,13 +202,13 @@ export type MessageContent = {
   headers: Record<string, string>;
   bodyText: string;
   snippet: string;
-  attachments: string[];
+  attachments: Array<{ filename: string; mimeType: string; data: Buffer }>;
 };
 
 type GmailMessagePart = {
   mimeType?: string;
   filename?: string;
-  body?: { data?: string };
+  body?: { data?: string; attachmentId?: string; size?: number };
   parts?: GmailMessagePart[];
 };
 
@@ -264,10 +264,17 @@ export async function getMessageContent(accessToken: string, messageId: string):
 
   const textParts: string[] = [];
   const htmlParts: string[] = [];
-  const attachments: string[] = [];
+  const attachmentParts: Array<{ filename: string; mimeType: string; attachmentId?: string; data?: string; size?: number }> = [];
   const visit = (part: GmailMessagePart) => {
-    if (part.filename) attachments.push(part.filename.slice(0, 180));
-    if (part.body?.data) {
+    if (part.filename) {
+      attachmentParts.push({
+        filename: part.filename.slice(0, 180),
+        mimeType: part.mimeType ?? "application/octet-stream",
+        attachmentId: part.body?.attachmentId,
+        data: part.body?.data,
+        size: part.body?.size,
+      });
+    } else if (part.body?.data) {
       const decoded = decodeMessageData(part.body.data);
       if (part.mimeType === "text/plain") textParts.push(decoded);
       else if (part.mimeType === "text/html") htmlParts.push(decoded);
@@ -276,12 +283,35 @@ export async function getMessageContent(accessToken: string, messageId: string):
   };
   visit(json.payload);
 
+  // Store real attachment bytes, with strict per-file and per-message bounds.
+  const attachments: MessageContent["attachments"] = [];
+  let totalAttachmentBytes = 0;
+  for (const part of attachmentParts.slice(0, 10)) {
+    if (part.size && part.size > 10 * 1024 * 1024) continue;
+    let data: Buffer | null = null;
+    if (part.data) {
+      data = Buffer.from(part.data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+    } else if (part.attachmentId) {
+      const attachmentResponse = await gmailFetch({
+        accessToken,
+        path: `/users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.attachmentId)}`,
+      });
+      const attachmentJson = (await attachmentResponse.json().catch(() => null)) as { data?: string; size?: number } | null;
+      if (attachmentJson?.data) {
+        data = Buffer.from(attachmentJson.data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+      }
+    }
+    if (!data || data.length > 10 * 1024 * 1024 || totalAttachmentBytes + data.length > 20 * 1024 * 1024) continue;
+    totalAttachmentBytes += data.length;
+    attachments.push({ filename: part.filename, mimeType: part.mimeType, data });
+  }
+
   const rawText = textParts.length ? textParts.join("\n\n") : htmlParts.map(htmlToPlainText).join("\n\n");
   return {
     id: json.id,
     headers,
     bodyText: rawText.slice(0, 100_000),
     snippet: (json.snippet ?? "").slice(0, 500),
-    attachments: [...new Set(attachments)].slice(0, 20),
+    attachments,
   };
 }
