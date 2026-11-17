@@ -4,7 +4,7 @@ import { jsonError, jsonOk } from "@/server/http";
 import { gmailFailure } from "@/server/mail/http";
 import { getConnectionForUser } from "@/server/mail/repository";
 
-const WINDOW_MS = 60 * 1000;
+const WINDOW_MS = 5 * 1000;
 const lastSync = new Map<string, number>();
 
 export async function POST(request: Request) {
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
       return jsonError("Connect Gmail before syncing.", 400, { code: "NOT_CONNECTED" });
     }
 
-    const result = await syncConnection(connection);
+    const fullResync = !(await hasStoredMessageContent(user.id));
+    const result = await syncConnection(connection, { fullResync });
     return jsonOk(result);
   } catch (error) {
     return gmailFailure(error, "sync");
