@@ -2,7 +2,7 @@ import { syncConnection } from "@/lib/gmail/notification-sync";
 import { getSessionUser, hasValidOrigin } from "@/server/auth/user";
 import { jsonError, jsonOk } from "@/server/http";
 import { gmailFailure } from "@/server/mail/http";
-import { getConnectionForUser } from "@/server/mail/repository";
+import { getConnectionForUser, hasStoredMessageContent } from "@/server/mail/repository";
 
 const WINDOW_MS = 5 * 1000;
 const lastSync = new Map<string, number>();
