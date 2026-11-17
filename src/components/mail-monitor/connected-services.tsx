@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { AppWindow, Gamepad2, Layers3 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -59,26 +60,29 @@ function ServiceGrid({
   return (
     <ul className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
       {services.map((service) => (
-        <li
-          key={service.serviceName}
-          className="flex min-w-0 items-center gap-3 rounded-xl border border-border/60 bg-muted/15 p-3 transition-colors hover:border-primary/30 hover:bg-muted/30"
-        >
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
-            {kind === "games" ? (
-              <Gamepad2 className="size-5" aria-hidden="true" />
-            ) : (
-              <AppWindow className="size-5" aria-hidden="true" />
-            )}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{labelFor(service.serviceName)}</p>
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              Last detected {formatDate(service.lastDetectedAt)}
-            </p>
-          </div>
-          <Badge variant="secondary" className="shrink-0 tabular-nums">
-            {service.notificationCount}
-          </Badge>
+        <li key={service.serviceName}>
+          <Link
+            href={`/mail-monitor/services/${encodeURIComponent(service.serviceName)}`}
+            aria-label={`View ${labelFor(service.serviceName)} activity`}
+            className="flex min-w-0 items-center gap-3 rounded-xl border border-border/60 bg-muted/15 p-3 transition-colors hover:border-primary/40 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
+              {kind === "games" ? (
+                <Gamepad2 className="size-5" aria-hidden="true" />
+              ) : (
+                <AppWindow className="size-5" aria-hidden="true" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold">{labelFor(service.serviceName)}</p>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                Last detected {formatDate(service.lastDetectedAt)}
+              </p>
+            </div>
+            <Badge variant="secondary" className="shrink-0 tabular-nums">
+              {service.notificationCount}
+            </Badge>
+          </Link>
         </li>
       ))}
     </ul>
