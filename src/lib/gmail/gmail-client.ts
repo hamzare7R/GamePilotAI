@@ -98,7 +98,7 @@ export async function listInboxHistory(accessToken: string, startHistoryId: stri
   let pageToken: string | undefined;
 
   // Bound the loop so a very large backlog cannot exceed the function timeout.
-  for (let page = 0; page < 3; page += 1) {
+  for (let page = 0; page < 10; page += 1) {
     const query = new URLSearchParams({
       startHistoryId,
       historyTypes: "messageAdded",
@@ -139,11 +139,24 @@ export async function listInboxHistory(accessToken: string, startHistoryId: stri
   return { historyId, messageIds: [...ids] };
 }
 
-export async function listRecentInboxMessageIds(accessToken: string, maxResults = 25) {
-  const query = new URLSearchParams({ labelIds: "INBOX", maxResults: String(maxResults) });
-  const response = await gmailFetch({ accessToken, path: `/users/me/messages?${query.toString()}` });
-  const json = (await response.json().catch(() => null)) as { messages?: Array<{ id?: string }> } | null;
-  return (json?.messages ?? []).flatMap((entry) => (entry.id ? [entry.id] : []));
+export async function listRecentInboxMessageIds(accessToken: string, maxResults = 1000) {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+
+  for (let page = 0; page < 10 && ids.length < maxResults; page += 1) {
+    const query = new URLSearchParams({ labelIds: "INBOX", maxResults: String(Math.min(100, maxResults - ids.length)) });
+    if (pageToken) query.set("pageToken", pageToken);
+    const response = await gmailFetch({ accessToken, path: `/users/me/messages?${query.toString()}` });
+    const json = (await response.json().catch(() => null)) as {
+      messages?: Array<{ id?: string }>;
+      nextPageToken?: string;
+    } | null;
+    ids.push(...(json?.messages ?? []).flatMap((entry) => (entry.id ? [entry.id] : [])));
+    if (!json?.nextPageToken) break;
+    pageToken = json.nextPageToken;
+  }
+
+  return ids.slice(0, maxResults);
 }
 
 export type MessageMetadata = {
