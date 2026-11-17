@@ -97,8 +97,16 @@ export async function syncConnection(
       let content: Awaited<ReturnType<typeof getMessageContent>>;
       try {
         content = await getMessageContent(accessToken, messageId);
-      } catch {
-        // Keep transient failures queued so a later sync can retry them.
+      } catch (error) {
+        const status = (error as { status?: unknown }).status;
+        if (status === 404) {
+          await removePendingSyncMessage(connection.id, messageId);
+          skipped += 1;
+          continue;
+        }
+        // Authorization failures must reach the outer handler; transient errors
+        // remain queued for a later retry instead of being silently discarded.
+        if (status === 401 || status === 403) throw error;
         skipped += 1;
         break;
       }
