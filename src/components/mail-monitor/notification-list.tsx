@@ -27,10 +27,15 @@ export function NotificationList({
   }>;
 }) {
   return (
-    <Card>
+    <Card id="recent-notifications" className="scroll-mt-6">
       <CardHeader>
-        <CardTitle>Recent notifications</CardTitle>
-        <CardDescription>Metadata only: sender domain, service, category and time. No content is stored.</CardDescription>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <CardTitle>Activity details</CardTitle>
+            <CardDescription>Recent account and security events detected from sender metadata.</CardDescription>
+          </div>
+          <Badge variant="outline">{notifications.length} records</Badge>
+        </div>
       </CardHeader>
       <CardContent>
         {notifications.length === 0 ? (
@@ -49,7 +54,7 @@ export function NotificationList({
               </thead>
               <tbody>
                 {notifications.map((notification) => (
-                  <tr key={notification.id} className="border-b border-border/40 last:border-0">
+                  <tr key={notification.id} className="border-b border-border/40 transition-colors hover:bg-muted/20 last:border-0">
                     <td className="py-2.5 pr-3 font-medium">{serviceLabel(notification.serviceName)}</td>
                     <td className="py-2.5 pr-3 text-muted-foreground">{notification.senderDomain || "—"}</td>
                     <td className="py-2.5 pr-3 text-muted-foreground">
