@@ -14,6 +14,7 @@ export type MailConnection = {
 
 export type MailNotification = {
   id: string;
+  gmailMessageId: string;
   serviceName: string;
   messageCategory: string;
   senderDomain: string;
