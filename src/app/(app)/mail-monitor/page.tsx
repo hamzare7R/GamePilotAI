@@ -66,8 +66,10 @@ export default async function MailMonitorPage({
           </p>
           <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Mail Monitor</h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            One clear place to monitor account alerts and security activity from your connected services.
-            GamePilot reads sender metadata only — never message bodies, subjects or verification codes.
+            Monitor account alerts using sender metadata. When you explicitly open a notification,
+            GamePilotAI fetches that message's subject and readable content on demand; message content
+            is not stored in GamePilotAI. Google's gmail.readonly permission is broad and can technically
+            access all messages and settings in the connected Gmail account.
           </p>
         </div>
         <Badge
