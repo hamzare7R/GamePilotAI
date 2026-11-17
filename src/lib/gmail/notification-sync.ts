@@ -9,7 +9,6 @@ import {
   recordSyncEvent,
   reclassifyStoredNotifications,
   setConnectionStatus,
-  updateConnectionSync,
   updateConnectionWatch,
 } from "@/server/mail/repository";
 import type { ConnectionStatus, MailConnection } from "@/server/mail/types";
@@ -61,8 +60,7 @@ async function resolveMessageIds(accessToken: string, connection: MailConnection
     }
   }
 
-  // Full resync: newest page only, then adopt the mailbox historyId so the next
-  // run can use incremental history again.
+  // Full resync: import up to 1000 recent inbox messages across paginated Gmail results.
   const [messageIds, profile] = await Promise.all([
     listRecentInboxMessageIds(accessToken),
     fetchMailboxHistoryId(accessToken).catch(() => null),
