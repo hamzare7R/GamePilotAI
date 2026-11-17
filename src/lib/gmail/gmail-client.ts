@@ -210,19 +210,19 @@ function decodeHtmlEntities(value: string) {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&#(\\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(parseInt(code, 16)));
+    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(parseInt(code, 16)));
 }
 
 function htmlToPlainText(value: string) {
   return decodeHtmlEntities(
     value
-      .replace(/<head[\\s\\S]*?<\\/head>/gi, " ")
-      .replace(/<(script|style|noscript)[^>]*>[\\s\\S]*?<\\/\\1>/gi, " ")
-      .replace(/<(br|hr)\\s*\\/?\s*>/gi, "\\n")
-      .replace(/<\\/(p|div|li|tr|h[1-6])>/gi, "\\n")
+      .replace(/<head[\s\S]*?<\/head>/gi, " ")
+      .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<(br|hr)\s*\/?\s*>/gi, "\n")
+      .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
       .replace(/<[^>]*>/g, " "),
-  ).replace(/[ \\t]+/g, " ").replace(/\\n[ \\t]+/g, "\\n").replace(/\\n{3,}/g, "\\n\\n").trim();
+  ).replace(/[ \t]+/g, " ").replace(/\n[ \t]+/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 export async function getMessageContent(accessToken: string, messageId: string): Promise<MessageContent> {
@@ -262,7 +262,7 @@ export async function getMessageContent(accessToken: string, messageId: string):
   };
   visit(json.payload);
 
-  const rawText = textParts.length ? textParts.join("\\n\\n") : htmlParts.map(htmlToPlainText).join("\\n\\n");
+  const rawText = textParts.length ? textParts.join("\n\n") : htmlParts.map(htmlToPlainText).join("\n\n");
   return {
     id: json.id,
     headers,
