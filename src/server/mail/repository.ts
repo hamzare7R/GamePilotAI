@@ -144,13 +144,41 @@ export async function setConnectionStatus(connectionId: string, status: Connecti
 
 export async function removeConnectionForUser(userId: string) {
   await ensureMailSchema();
-  const result = await getPool().query<{ email_address: string; encrypted_refresh_token: string }>(
-    `DELETE FROM gmail_connections WHERE user_id = $1
-     RETURNING email_address, encrypted_refresh_token`,
-    [userId],
-  );
-  const row = result.rows[0];
-  return row ? { emailAddress: row.email_address, encryptedRefreshToken: row.encrypted_refresh_token } : null;
+  const client = await getPool().connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Disconnecting Gmail resets the user's Mail Monitor view. Remove all
+    // Gmail-derived metadata and aggregates so the next connection starts
+    // clean and repopulates only from the newly connected Gmail account.
+    const connection = await client.query<{ id: string; email_address: string; encrypted_refresh_token: string }>(
+      `SELECT id, email_address, encrypted_refresh_token
+         FROM gmail_connections
+        WHERE user_id = $1
+        LIMIT 1
+        FOR UPDATE`,
+      [userId],
+    );
+    const row = connection.rows[0];
+    if (!row) {
+      await client.query("COMMIT");
+      return null;
+    }
+
+    await client.query("DELETE FROM gmail_sync_events WHERE connection_id = $1", [row.id]);
+    await client.query("DELETE FROM gmail_notifications WHERE user_id = $1", [userId]);
+    await client.query("DELETE FROM connected_services WHERE user_id = $1", [userId]);
+    await client.query("DELETE FROM gmail_connections WHERE id = $1", [row.id]);
+
+    await client.query("COMMIT");
+    return { emailAddress: row.email_address, encryptedRefreshToken: row.encrypted_refresh_token };
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 /**
