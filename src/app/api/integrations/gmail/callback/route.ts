@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     const tokens = await exchangeAuthorizationCode(code);
 
     const grantedScopes = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
-    if (!grantedScopes.has(GMAIL_SCOPE)) {
+    if (tokens.scope && !grantedScopes.has(GMAIL_SCOPE)) {
       console.warn("[gmail:callback] required read-only scope was not granted.");
       return clearStateCookie(redirectTo(request, "scope_missing"));
     }
