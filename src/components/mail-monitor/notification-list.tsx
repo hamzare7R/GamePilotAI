@@ -1,3 +1,6 @@
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CATEGORY_LABELS, SERVICE_LABELS, type MessageCategory, type ServiceKey } from "@/lib/gmail/service-map";
@@ -55,7 +58,12 @@ export function NotificationList({
               <tbody>
                 {notifications.map((notification) => (
                   <tr key={notification.id} className="border-b border-border/40 transition-colors hover:bg-muted/20 last:border-0">
-                    <td className="py-2.5 pr-3 font-medium">{serviceLabel(notification.serviceName)}</td>
+                    <td className="py-2.5 pr-3 font-medium">
+                      <Link href={`/mail-monitor/notifications/${notification.id}`} className="inline-flex items-center gap-1.5 text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        {serviceLabel(notification.serviceName)}
+                        <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                      </Link>
+                    </td>
                     <td className="py-2.5 pr-3 text-muted-foreground">{notification.senderDomain || "—"}</td>
                     <td className="py-2.5 pr-3 text-muted-foreground">
                       {categoryLabel(notification.messageCategory)}
