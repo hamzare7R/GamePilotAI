@@ -46,9 +46,13 @@ const CREATE_SCHEMA = `
     filename text NOT NULL,
     mime_type text NOT NULL DEFAULT 'application/octet-stream',
     byte_size bigint NOT NULL DEFAULT 0,
-    content bytea NOT NULL,
+    content bytea NOT NULL DEFAULT ''::bytea,
     created_at timestamptz NOT NULL DEFAULT now()
   );
+
+  -- Upgrade installations where the attachment table predates binary storage.
+  ALTER TABLE gmail_attachments ADD COLUMN IF NOT EXISTS byte_size bigint NOT NULL DEFAULT 0;
+  ALTER TABLE gmail_attachments ADD COLUMN IF NOT EXISTS content bytea NOT NULL DEFAULT ''::bytea;
 
   CREATE INDEX IF NOT EXISTS gmail_attachments_owner_notification_idx
     ON gmail_attachments (user_id, notification_id);
