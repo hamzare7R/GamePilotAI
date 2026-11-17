@@ -84,7 +84,7 @@ export function GmailAccountCard({
               Gmail connection
             </CardTitle>
             <CardDescription>
-              Read-only Gmail access. Mail Monitor fetches the selected message when you open it; message content is not stored in GamePilotAI.
+              Google's gmail.readonly permission can technically access all messages and settings in your Gmail account. GamePilotAI fetches only a notification you explicitly open; message content is not stored in GamePilotAI.
             </CardDescription>
           </div>
           {connection ? (
