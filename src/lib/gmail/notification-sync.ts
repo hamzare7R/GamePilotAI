@@ -34,6 +34,7 @@ export type SyncResult = {
   status: "ok" | "failed" | "skipped" | "duplicate";
   processed: number;
   skipped: number;
+  queued?: boolean;
   errorCode?: string;
 };
 
@@ -135,7 +136,7 @@ export async function syncConnection(
     }
 
     const queue = await completeSyncQueue(connection.id, historyId);
-    await reclassifyStoredNotifications(connection.userId);
+    if (queue.complete) await reclassifyStoredNotifications(connection.userId);
     await recordSyncEvent({ connectionId: connection.id, eventType: "sync", status: "success" });
 
     return { status: "ok", processed, skipped, ...(queue.complete ? {} : { queued: true }) };
