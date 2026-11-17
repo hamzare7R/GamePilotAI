@@ -415,6 +415,41 @@ export async function getMailSummary(userId: string) {
   } satisfies MailSummary;
 }
 
+export async function listNotificationsForService(userId: string, serviceName: string) {
+  await ensureMailSchema();
+  const result = await getPool().query<{
+    id: string;
+    gmail_message_id: string;
+    service_name: string;
+    message_category: string;
+    sender_domain: string;
+    sender_address: string;
+    received_at: Date | null;
+    processing_status: string;
+    created_at: Date;
+  }>(
+    `SELECT id, gmail_message_id, service_name, message_category, sender_domain, sender_address,
+            received_at, processing_status, created_at
+       FROM gmail_notifications
+      WHERE user_id = $1 AND service_name = $2
+      ORDER BY COALESCE(received_at, created_at) DESC
+      LIMIT 100`,
+    [userId, serviceName],
+  );
+
+  return result.rows.map<MailNotification>((row) => ({
+    id: row.id,
+    gmailMessageId: row.gmail_message_id,
+    serviceName: row.service_name,
+    messageCategory: row.message_category,
+    senderDomain: row.sender_domain,
+    senderAddress: row.sender_address,
+    receivedAt: row.received_at,
+    processingStatus: row.processing_status,
+    createdAt: row.created_at,
+  }));
+}
+
 export async function listConnectedServices(userId: string) {
   await ensureMailSchema();
   const result = await getPool().query<{
