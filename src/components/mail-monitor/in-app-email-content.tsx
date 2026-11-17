@@ -13,7 +13,7 @@ type EmailContent = {
   date: string;
   bodyText: string;
   snippet: string;
-  attachments: string[];
+  attachments: Array<{ id: string; filename: string; mimeType: string; byteSize: number }>;
 };
 
 export function InAppEmailContent({ notificationId }: { notificationId: string }) {
@@ -54,7 +54,7 @@ export function InAppEmailContent({ notificationId }: { notificationId: string }
           <div>
             <CardTitle>Email content</CardTitle>
             <CardDescription>
-              Loaded securely from your connected Gmail account when you open this page. The message is not saved in GamePilotAI.
+              Saved in your private GamePilotAI mail database and available even after Gmail is disconnected.
             </CardDescription>
           </div>
         </div>
@@ -101,10 +101,19 @@ export function InAppEmailContent({ notificationId }: { notificationId: string }
                 <p className="mb-2 flex items-center gap-2 text-sm font-semibold">
                   <Paperclip className="size-4" aria-hidden="true" /> Attachments ({email.attachments.length})
                 </p>
-                <ul className="space-y-1 text-sm text-muted-foreground">
-                  {email.attachments.map((name, index) => <li key={`${name}-${index}`} className="break-all">{name}</li>)}
+                <ul className="space-y-2 text-sm">
+                  {email.attachments.map((attachment) => (
+                    <li key={attachment.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 p-3">
+                      <span className="min-w-0 break-all text-muted-foreground">{attachment.filename}</span>
+                      <a
+                        className="shrink-0 font-medium text-primary underline-offset-4 hover:underline"
+                        href={`/api/integrations/gmail/attachments/${encodeURIComponent(attachment.id)}`}
+                      >
+                        Download · {Math.max(1, Math.round(attachment.byteSize / 1024))} KB
+                      </a>
+                    </li>
+                  ))}
                 </ul>
-                <p className="mt-2 text-xs text-muted-foreground">Attachments are listed only; files are not downloaded or stored.</p>
               </div>
             ) : null}
           </div>

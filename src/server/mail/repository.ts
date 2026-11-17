@@ -232,7 +232,85 @@ export async function claimPubSubMessage(connectionId: string | null, messageId:
   return result.rows[0]?.id ?? null;
 }
 
-export async function insertNotification(input: {  userId: string;
+export async function hasStoredMessageContent(userId: string) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ found: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM gmail_notifications
+        WHERE user_id = $1 AND content_fetched_at IS NOT NULL
+     ) AS found`,
+    [userId],
+  );
+  return result.rows[0]?.found ?? false;
+}
+
+export async function enqueueSyncMessages(
+  input: { userId: string; connectionId: string; messageIds: string[]; historyId: string | null },
+) {
+  await ensureMailSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    for (const messageId of input.messageIds) {
+      await client.query(
+        `INSERT INTO gmail_sync_queue (id, user_id, connection_id, gmail_message_id)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (connection_id, gmail_message_id) DO NOTHING`,
+        [randomUUID(), input.userId, input.connectionId, messageId],
+      );
+    }
+    // Advancing history is safe because every discovered message is now durable in the queue.
+    await client.query(
+      `UPDATE gmail_connections
+          SET history_id = COALESCE($2, history_id), updated_at = now()
+        WHERE id = $1 AND user_id = $3`,
+      [input.connectionId, input.historyId, input.userId],
+    );
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function listPendingSyncMessages(connectionId: string, limit = 40) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ gmail_message_id: string }>(
+    `SELECT gmail_message_id
+       FROM gmail_sync_queue
+      WHERE connection_id = $1
+      ORDER BY created_at ASC
+      LIMIT $2`,
+    [connectionId, Math.min(Math.max(limit, 1), 100)],
+  );
+  return result.rows.map((row) => row.gmail_message_id);
+}
+
+export async function removePendingSyncMessage(connectionId: string, gmailMessageId: string) {
+  await ensureMailSchema();
+  await getPool().query(
+    "DELETE FROM gmail_sync_queue WHERE connection_id = $1 AND gmail_message_id = $2",
+    [connectionId, gmailMessageId],
+  );
+}
+
+export async function completeSyncQueue(connectionId: string, historyId: string | null) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ pending: boolean }>(
+    "SELECT EXISTS (SELECT 1 FROM gmail_sync_queue WHERE connection_id = $1) AS pending",
+    [connectionId],
+  );
+  const pending = result.rows[0]?.pending ?? false;
+  if (!pending) {
+    await updateConnectionSync(connectionId, historyId);
+  }
+  return { complete: !pending };
+}
+
+export async function insertNotification(input: {
+  userId: string;
   connectionId: string;
   gmailMessageId: string;
   senderDomain: string;
@@ -240,32 +318,80 @@ export async function insertNotification(input: {  userId: string;
   serviceName: string;
   messageCategory: string;
   receivedAt: Date | null;
+  subject: string;
+  recipient: string;
+  bodyText: string;
+  snippet: string;
+  headers: Record<string, string>;
+  attachments: Array<{ filename: string; mimeType: string; data: Buffer }>;
 }) {
   await ensureMailSchema();
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
-    const inserted = await client.query<{ id: string }>(
-      `INSERT INTO gmail_notifications
-         (id, user_id, connection_id, gmail_message_id, sender_domain, sender_address,
-          service_name, message_category, received_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT (connection_id, gmail_message_id) DO NOTHING
-       RETURNING id`,
-      [
-        randomUUID(),
-        input.userId,
-        input.connectionId,
-        input.gmailMessageId,
-        input.senderDomain,
-        input.senderAddress,
-        input.serviceName,
-        input.messageCategory,
-        input.receivedAt,
-      ],
+    // Serialize duplicate deliveries for the same Gmail message before checking
+    // whether its notification row already exists.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+      [input.connectionId, input.gmailMessageId],
     );
+    const existing = await client.query<{ id: string }>(
+      `SELECT id FROM gmail_notifications
+        WHERE connection_id = $1 AND gmail_message_id = $2
+        FOR UPDATE`,
+      [input.connectionId, input.gmailMessageId],
+    );
+    let notificationId = existing.rows[0]?.id;
+    const isNew = !notificationId;
 
-    if (inserted.rowCount === 1) {
+    if (notificationId) {
+      await client.query(
+        `UPDATE gmail_notifications
+            SET sender_domain = $2, sender_address = $3, service_name = $4,
+                message_category = $5, received_at = $6, subject = $7,
+                recipient = $8, body_text = $9, snippet = $10,
+                headers = $11::jsonb, content_fetched_at = now()
+          WHERE id = $1 AND user_id = $12`,
+        [
+          notificationId, input.senderDomain, input.senderAddress, input.serviceName,
+          input.messageCategory, input.receivedAt, input.subject, input.recipient,
+          input.bodyText, input.snippet, JSON.stringify(input.headers), input.userId,
+        ],
+      );
+    } else {
+      notificationId = randomUUID();
+      await client.query(
+        `INSERT INTO gmail_notifications
+           (id, user_id, connection_id, gmail_message_id, sender_domain, sender_address,
+            service_name, message_category, received_at, subject, recipient, body_text,
+            snippet, headers, content_fetched_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, now())`,
+        [
+          notificationId, input.userId, input.connectionId, input.gmailMessageId,
+          input.senderDomain, input.senderAddress, input.serviceName, input.messageCategory,
+          input.receivedAt, input.subject, input.recipient, input.bodyText, input.snippet,
+          JSON.stringify(input.headers),
+        ],
+      );
+    }
+
+    await client.query(
+      "DELETE FROM gmail_attachments WHERE user_id = $1 AND notification_id = $2",
+      [input.userId, notificationId],
+    );
+    for (const attachment of input.attachments) {
+      await client.query(
+        `INSERT INTO gmail_attachments
+           (id, user_id, notification_id, filename, mime_type, byte_size, content)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          randomUUID(), input.userId, notificationId, attachment.filename,
+          attachment.mimeType, attachment.data.length, attachment.data,
+        ],
+      );
+    }
+
+    if (isNew) {
       await client.query(
         `INSERT INTO connected_services (id, user_id, service_name, notification_count)
          VALUES ($1, $2, $3, 1)
@@ -277,7 +403,7 @@ export async function insertNotification(input: {  userId: string;
     }
 
     await client.query("COMMIT");
-    return inserted.rowCount === 1;
+    return isNew;
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
@@ -363,16 +489,35 @@ export async function getNotificationForUser(userId: string, notificationId: str
     received_at: Date | null;
     processing_status: string;
     created_at: Date;
+    subject: string;
+    recipient: string;
+    body_text: string;
+    snippet: string;
+    headers: Record<string, string>;
+    content_fetched_at: Date | null;
   }>(
     `SELECT id, gmail_message_id, service_name, message_category, sender_domain, sender_address,
-            received_at, processing_status, created_at
+            received_at, processing_status, created_at, subject, recipient, body_text, snippet,
+            headers, content_fetched_at
        FROM gmail_notifications
       WHERE user_id = $1 AND id = $2
       LIMIT 1`,
     [userId, notificationId],
   );
   const row = result.rows[0];
-  return row ? {
+  if (!row) return null;
+
+  const attachments = await getPool().query<{
+    id: string; filename: string; mime_type: string; byte_size: string;
+  }>(
+    `SELECT id, filename, mime_type, byte_size
+       FROM gmail_attachments
+      WHERE user_id = $1 AND notification_id = $2
+      ORDER BY created_at ASC`,
+    [userId, notificationId],
+  );
+
+  return {
     id: row.id,
     gmailMessageId: row.gmail_message_id,
     serviceName: row.service_name,
@@ -382,7 +527,33 @@ export async function getNotificationForUser(userId: string, notificationId: str
     receivedAt: row.received_at,
     processingStatus: row.processing_status,
     createdAt: row.created_at,
-  } satisfies MailNotification : null;
+    subject: row.subject,
+    recipient: row.recipient,
+    bodyText: row.body_text,
+    snippet: row.snippet,
+    headers: row.headers ?? {},
+    contentFetchedAt: row.content_fetched_at,
+    attachments: attachments.rows.map((item) => ({
+      id: item.id,
+      filename: item.filename,
+      mimeType: item.mime_type,
+      byteSize: Number(item.byte_size),
+    })),
+  };
+}
+
+export async function getAttachmentForUser(userId: string, attachmentId: string) {
+  await ensureMailSchema();
+  const result = await getPool().query<{
+    filename: string; mime_type: string; content: Buffer;
+  }>(
+    `SELECT filename, mime_type, content
+       FROM gmail_attachments
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [userId, attachmentId],
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function listNotifications(userId: string, limit = 50) {

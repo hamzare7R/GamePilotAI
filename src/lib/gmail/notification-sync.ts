@@ -1,11 +1,14 @@
 import {
   claimPubSubMessage,
+  enqueueSyncMessages,
+  listPendingSyncMessages,
+  removePendingSyncMessage,
+  completeSyncQueue,
   getConnectionByEmail,
   insertNotification,
   recordSyncEvent,
   reclassifyStoredNotifications,
   setConnectionStatus,
-  updateConnectionSync,
   updateConnectionWatch,
 } from "@/server/mail/repository";
 import type { ConnectionStatus, MailConnection } from "@/server/mail/types";
@@ -13,7 +16,7 @@ import type { ConnectionStatus, MailConnection } from "@/server/mail/types";
 import type { PubSubNotification } from "./pubsub-verification";
 import {
   fetchMailboxHistoryId,
-  getMessageMetadata,
+  getMessageContent,
   HistoryExpiredError,
   listInboxHistory,
   listRecentInboxMessageIds,
@@ -30,6 +33,7 @@ export type SyncResult = {
   status: "ok" | "failed" | "skipped" | "duplicate";
   processed: number;
   skipped: number;
+  queued?: boolean;
   errorCode?: string;
 };
 
@@ -56,8 +60,7 @@ async function resolveMessageIds(accessToken: string, connection: MailConnection
     }
   }
 
-  // Full resync: newest page only, then adopt the mailbox historyId so the next
-  // run can use incremental history again.
+  // Full resync: import up to 1000 recent inbox messages across paginated Gmail results.
   const [messageIds, profile] = await Promise.all([
     listRecentInboxMessageIds(accessToken),
     fetchMailboxHistoryId(accessToken).catch(() => null),
@@ -77,20 +80,40 @@ export async function syncConnection(
       options.fullResync ?? false,
     );
 
+    // Queue every discovered ID before advancing Gmail history. This lets a
+    // large initial import continue in safe, bounded batches without losing IDs.
+    await enqueueSyncMessages({
+      userId: connection.userId,
+      connectionId: connection.id,
+      messageIds,
+      historyId,
+    });
+
     let processed = 0;
     let skipped = 0;
+    const pendingIds = await listPendingSyncMessages(connection.id, MAX_MESSAGES_PER_SYNC);
 
-    for (const messageId of messageIds.slice(0, MAX_MESSAGES_PER_SYNC)) {
-      let metadata: Awaited<ReturnType<typeof getMessageMetadata>>;
+    for (const messageId of pendingIds) {
+      let content: Awaited<ReturnType<typeof getMessageContent>>;
       try {
-        metadata = await getMessageMetadata(accessToken, messageId);
-      } catch {
+        content = await getMessageContent(accessToken, messageId);
+      } catch (error) {
+        const status = (error as { status?: unknown }).status;
+        if (status === 404) {
+          await removePendingSyncMessage(connection.id, messageId);
+          skipped += 1;
+          continue;
+        }
+        // Authorization failures must reach the outer handler; transient errors
+        // remain queued for a later retry instead of being silently discarded.
+        if (status === 401 || status === 403) throw error;
         skipped += 1;
-        continue;
+        break;
       }
 
-      const sender = parseSenderAddress(metadata.headers.from);
+      const sender = parseSenderAddress(content.headers.from);
       if (!sender) {
+        await removePendingSyncMessage(connection.id, messageId);
         skipped += 1;
         continue;
       }
@@ -99,24 +122,30 @@ export async function syncConnection(
       const inserted = await insertNotification({
         userId: connection.userId,
         connectionId: connection.id,
-        gmailMessageId: metadata.id,
+        gmailMessageId: content.id,
         senderDomain: sender.senderDomain,
         senderAddress: sender.senderAddress,
         serviceName: match.service,
         messageCategory: match.category,
-        receivedAt: parseHeaderDate(metadata.headers.date),
+        receivedAt: parseHeaderDate(content.headers.date),
+        subject: content.headers.subject ?? "",
+        recipient: content.headers.to ?? "",
+        bodyText: content.bodyText,
+        snippet: content.snippet,
+        headers: content.headers,
+        attachments: content.attachments,
       });
+      await removePendingSyncMessage(connection.id, messageId);
 
       if (inserted) processed += 1;
       else skipped += 1;
     }
 
-    await reclassifyStoredNotifications(connection.userId);
-
-    await updateConnectionSync(connection.id, historyId);
+    const queue = await completeSyncQueue(connection.id, historyId);
+    if (queue.complete) await reclassifyStoredNotifications(connection.userId);
     await recordSyncEvent({ connectionId: connection.id, eventType: "sync", status: "success" });
 
-    return { status: "ok", processed, skipped };
+    return { status: "ok", processed, skipped, ...(queue.complete ? {} : { queued: true }) };
   } catch (error) {
     const code = safeErrorCode(error);
     const status: ConnectionStatus = AUTH_ERROR_CODES.has(code) ? "error" : "active";

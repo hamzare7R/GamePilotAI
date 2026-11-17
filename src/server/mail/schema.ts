@@ -39,6 +39,18 @@ const CREATE_SCHEMA = `
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS headers jsonb NOT NULL DEFAULT '{}'::jsonb;
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS content_fetched_at timestamptz;
 
+  CREATE TABLE IF NOT EXISTS gmail_sync_queue (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    connection_id text NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,
+    gmail_message_id text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT gmail_sync_queue_message_unique UNIQUE (connection_id, gmail_message_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS gmail_sync_queue_connection_idx
+    ON gmail_sync_queue (connection_id, created_at ASC);
+
   CREATE TABLE IF NOT EXISTS gmail_attachments (
     id text PRIMARY KEY,
     user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -46,9 +58,13 @@ const CREATE_SCHEMA = `
     filename text NOT NULL,
     mime_type text NOT NULL DEFAULT 'application/octet-stream',
     byte_size bigint NOT NULL DEFAULT 0,
-    content bytea NOT NULL,
+    content bytea NOT NULL DEFAULT ''::bytea,
     created_at timestamptz NOT NULL DEFAULT now()
   );
+
+  -- Upgrade installations where the attachment table predates binary storage.
+  ALTER TABLE gmail_attachments ADD COLUMN IF NOT EXISTS byte_size bigint NOT NULL DEFAULT 0;
+  ALTER TABLE gmail_attachments ADD COLUMN IF NOT EXISTS content bytea NOT NULL DEFAULT ''::bytea;
 
   CREATE INDEX IF NOT EXISTS gmail_attachments_owner_notification_idx
     ON gmail_attachments (user_id, notification_id);
