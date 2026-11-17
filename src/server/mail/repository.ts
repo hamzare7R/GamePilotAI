@@ -329,6 +329,12 @@ export async function insertNotification(input: {
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
+    // Serialize duplicate deliveries for the same Gmail message before checking
+    // whether its notification row already exists.
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext($1), hashtext($2))",
+      [input.connectionId, input.gmailMessageId],
+    );
     const existing = await client.query<{ id: string }>(
       `SELECT id FROM gmail_notifications
         WHERE connection_id = $1 AND gmail_message_id = $2
