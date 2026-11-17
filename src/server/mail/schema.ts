@@ -38,7 +38,6 @@ const CREATE_SCHEMA = `
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS snippet text NOT NULL DEFAULT '';
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS headers jsonb NOT NULL DEFAULT '{}'::jsonb;
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS content_fetched_at timestamptz;
-  ALTER TABLE gmail_connections ADD COLUMN IF NOT EXISTS pending_history_id text;
 
   CREATE TABLE IF NOT EXISTS gmail_sync_queue (
     id text PRIMARY KEY,
