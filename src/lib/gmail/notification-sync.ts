@@ -3,6 +3,7 @@ import {
   getConnectionByEmail,
   insertNotification,
   recordSyncEvent,
+  reclassifyStoredNotifications,
   setConnectionStatus,
   updateConnectionSync,
   updateConnectionWatch,
@@ -109,6 +110,8 @@ export async function syncConnection(
       if (inserted) processed += 1;
       else skipped += 1;
     }
+
+    await reclassifyStoredNotifications(connection.userId);
 
     await updateConnectionSync(connection.id, historyId);
     await recordSyncEvent({ connectionId: connection.id, eventType: "sync", status: "success" });
