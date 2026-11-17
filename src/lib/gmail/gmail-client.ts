@@ -181,3 +181,93 @@ export async function fetchMailboxHistoryId(accessToken: string) {
     historyId: json.historyId ?? null,
   };
 }
+
+
+export type MessageContent = {
+  id: string;
+  headers: Record<string, string>;
+  bodyText: string;
+  snippet: string;
+  attachments: string[];
+};
+
+type GmailMessagePart = {
+  mimeType?: string;
+  filename?: string;
+  body?: { data?: string };
+  parts?: GmailMessagePart[];
+};
+
+function decodeMessageData(value: string) {
+  return Buffer.from(value.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+}
+
+function decodeHtmlEntities(value: string) {
+  return value
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(parseInt(code, 16)));
+}
+
+function htmlToPlainText(value: string) {
+  return decodeHtmlEntities(
+    value
+      .replace(/<head[\\s\\S]*?<\\/head>/gi, " ")
+      .replace(/<(script|style|noscript)[^>]*>[\\s\\S]*?<\\/\\1>/gi, " ")
+      .replace(/<(br|hr)\\s*\\/?\s*>/gi, "\\n")
+      .replace(/<\\/(p|div|li|tr|h[1-6])>/gi, "\\n")
+      .replace(/<[^>]*>/g, " "),
+  ).replace(/[ \\t]+/g, " ").replace(/\\n[ \\t]+/g, "\\n").replace(/\\n{3,}/g, "\\n\\n").trim();
+}
+
+export async function getMessageContent(accessToken: string, messageId: string): Promise<MessageContent> {
+  const query = new URLSearchParams({ format: "full" });
+  const response = await gmailFetch({
+    accessToken,
+    path: `/users/me/messages/${encodeURIComponent(messageId)}?${query.toString()}`,
+  });
+  const json = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        snippet?: string;
+        payload?: { headers?: Array<{ name?: string; value?: string }>; mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
+      }
+    | null;
+
+  if (!json?.id || !json.payload) {
+    throw new GmailRequestError("Gmail message content was empty.", "MESSAGE_INVALID", 502);
+  }
+
+  const headers: Record<string, string> = {};
+  for (const header of json.payload.headers ?? []) {
+    if (header.name && header.value) headers[header.name.toLowerCase()] = header.value;
+  }
+
+  const textParts: string[] = [];
+  const htmlParts: string[] = [];
+  const attachments: string[] = [];
+  const visit = (part: GmailMessagePart) => {
+    if (part.filename) attachments.push(part.filename.slice(0, 180));
+    if (part.body?.data) {
+      const decoded = decodeMessageData(part.body.data);
+      if (part.mimeType === "text/plain") textParts.push(decoded);
+      else if (part.mimeType === "text/html") htmlParts.push(decoded);
+    }
+    for (const child of part.parts ?? []) visit(child);
+  };
+  visit(json.payload);
+
+  const rawText = textParts.length ? textParts.join("\\n\\n") : htmlParts.map(htmlToPlainText).join("\\n\\n");
+  return {
+    id: json.id,
+    headers,
+    bodyText: rawText.slice(0, 100_000),
+    snippet: (json.snippet ?? "").slice(0, 500),
+    attachments: [...new Set(attachments)].slice(0, 20),
+  };
+}
