@@ -38,6 +38,19 @@ const CREATE_SCHEMA = `
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS snippet text NOT NULL DEFAULT '';
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS headers jsonb NOT NULL DEFAULT '{}'::jsonb;
   ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS content_fetched_at timestamptz;
+  ALTER TABLE gmail_connections ADD COLUMN IF NOT EXISTS pending_history_id text;
+
+  CREATE TABLE IF NOT EXISTS gmail_sync_queue (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    connection_id text NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,
+    gmail_message_id text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT gmail_sync_queue_message_unique UNIQUE (connection_id, gmail_message_id)
+  );
+
+  CREATE INDEX IF NOT EXISTS gmail_sync_queue_connection_idx
+    ON gmail_sync_queue (connection_id, created_at ASC);
 
   CREATE TABLE IF NOT EXISTS gmail_attachments (
     id text PRIMARY KEY,
