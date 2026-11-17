@@ -232,6 +232,18 @@ export async function claimPubSubMessage(connectionId: string | null, messageId:
   return result.rows[0]?.id ?? null;
 }
 
+export async function hasStoredMessageContent(userId: string) {
+  await ensureMailSchema();
+  const result = await getPool().query<{ found: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1 FROM gmail_notifications
+        WHERE user_id = $1 AND content_fetched_at IS NOT NULL
+     ) AS found`,
+    [userId],
+  );
+  return result.rows[0]?.found ?? false;
+}
+
 export async function enqueueSyncMessages(
   input: { userId: string; connectionId: string; messageIds: string[]; historyId: string | null },
 ) {
