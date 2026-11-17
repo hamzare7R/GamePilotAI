@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, ExternalLink, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CATEGORY_LABELS, SERVICE_LABELS, type MessageCategory, type ServiceKey } from "@/lib/gmail/service-map";
+import { InAppEmailContent } from "@/components/mail-monitor/in-app-email-content";
 import { getSessionUser } from "@/server/auth/user";
 import { getNotificationForUser } from "@/server/mail/repository";
 
@@ -29,7 +30,6 @@ export default async function NotificationDetailsPage({
 
   const service = SERVICE_LABELS[notification.serviceName as ServiceKey] ?? "Other services";
   const category = CATEGORY_LABELS[notification.messageCategory as MessageCategory] ?? "Unknown sender";
-  const gmailUrl = `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(notification.gmailMessageId)}`;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -41,7 +41,7 @@ export default async function NotificationDetailsPage({
           <Mail className="size-4" aria-hidden="true" /> Notification details
         </p>
         <h1 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">{service}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Review the detected sender information or open the original email in Gmail.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Read the original message without leaving GamePilotAI.</p>
       </div>
 
       <Card>
@@ -80,25 +80,10 @@ export default async function NotificationDetailsPage({
             </div>
           </dl>
 
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-semibold">Your email content stays in Gmail</p>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  GamePilot stores sender and message metadata only. It does not read or display the email body, subject, attachments, or verification codes.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Button asChild className="w-full sm:w-auto">
-            <a href={gmailUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink aria-hidden="true" /> Open original email in Gmail
-            </a>
-          </Button>
         </CardContent>
       </Card>
+
+      <InAppEmailContent notificationId={notification.id} />
     </div>
   );
 }
