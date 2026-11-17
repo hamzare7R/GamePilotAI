@@ -32,6 +32,27 @@ const CREATE_SCHEMA = `
     CONSTRAINT gmail_notifications_message_unique UNIQUE (connection_id, gmail_message_id)
   );
 
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS subject text NOT NULL DEFAULT '';
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS recipient text NOT NULL DEFAULT '';
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS body_text text NOT NULL DEFAULT '';
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS snippet text NOT NULL DEFAULT '';
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS headers jsonb NOT NULL DEFAULT '{}'::jsonb;
+  ALTER TABLE gmail_notifications ADD COLUMN IF NOT EXISTS content_fetched_at timestamptz;
+
+  CREATE TABLE IF NOT EXISTS gmail_attachments (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    notification_id text NOT NULL REFERENCES gmail_notifications(id) ON DELETE CASCADE,
+    filename text NOT NULL,
+    mime_type text NOT NULL DEFAULT 'application/octet-stream',
+    byte_size bigint NOT NULL DEFAULT 0,
+    content bytea NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now()
+  );
+
+  CREATE INDEX IF NOT EXISTS gmail_attachments_owner_notification_idx
+    ON gmail_attachments (user_id, notification_id);
+
   CREATE INDEX IF NOT EXISTS gmail_notifications_user_received_idx
     ON gmail_notifications (user_id, received_at DESC NULLS LAST);
 
