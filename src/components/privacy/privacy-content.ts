@@ -119,28 +119,27 @@ export const privacyContent: Record<PrivacyLocale, PrivacyContent> = {
         blocks: [
           {
             kind: "paragraph",
-            text: "GamePilotAI bietet die Funktion Mail Monitor, mit der Nutzer ihr Gmail-Konto verknüpfen können, um bestimmte Metadaten von E-Mails zu überwachen.",
+            text: "GamePilotAI bietet die Funktion Mail Monitor, mit der Nutzer ihr Gmail-Konto verknüpfen und ausgewählte, zuvor in Mail Monitor erkannte Nachrichten innerhalb von GamePilotAI öffnen können.",
           },
           {
             kind: "paragraph",
-            text: "In der aktuellen Version werden begrenzte Informationen verarbeitet, zum Beispiel:",
+            text: "Beim Öffnen einer ausgewählten Nachricht ruft GamePilotAI deren Betreff, Absender, Empfänger, Datum und lesbaren Nachrichtentext direkt von Gmail ab. Anhänge werden derzeit nur anhand ihrer Dateinamen angezeigt und nicht heruntergeladen.",
           },
           {
             kind: "list",
             items: [
-              "die E-Mail-Adresse des Absenders.",
-              "Datum und Uhrzeit der Nachricht.",
-              "die Nachrichten-ID.",
-              "einige verfügbare Labels und Metadaten.",
+              "Absender-, Empfänger- und Betreffzeilen sowie das Datum der ausgewählten Nachricht.",
+              "den lesbaren Textinhalt der ausgewählten Nachricht.",
+              "die Gmail-Nachrichten-ID und die für die Erkennung erforderlichen Metadaten.",
             ],
           },
           {
             kind: "paragraph",
-            text: "Die Funktion verwendet die von Google erteilte Gmail-Metadata-Berechtigung.",
+            text: "Für diese Funktion verwendet GamePilotAI die Gmail-Berechtigung gmail.readonly. Diese Berechtigung kann technisch den Zugriff auf Nachrichten und Einstellungen des verknüpften Gmail-Kontos ermöglichen. Die Funktion ruft den Nachrichteninhalt jedoch nur für eine Nachricht ab, die der Nutzer in Mail Monitor ausdrücklich öffnet.",
           },
           {
             kind: "paragraph",
-            text: "Wir bestätigen, dass die aktuelle Version weder den Inhalt von Gmail-Nachrichten noch deren Betreffzeilen liest und keine Sicherheitsbestätigungscodes (OTP), Passwörter oder Links zur Kontowiederherstellung extrahiert.",
+            text: "Der abgerufene Nachrichteninhalt wird zur Anzeige an den Nutzer übertragen und nicht als Nachrichteninhalt in der GamePilotAI-Datenbank gespeichert. E-Mail-HTML wird nicht als aktiver HTML-Inhalt dargestellt; externe Bilder und Anhänge werden nicht geladen. Gmail-Daten werden nicht zum Trainieren oder Verbessern von KI-Modellen verwendet.",
           },
           {
             kind: "paragraph",
@@ -390,28 +389,27 @@ export const privacyContent: Record<PrivacyLocale, PrivacyContent> = {
         blocks: [
           {
             kind: "paragraph",
-            text: "GamePilotAI offers a Mail Monitor feature that lets users link their Gmail account to monitor certain email metadata.",
+            text: "GamePilotAI offers Mail Monitor, which lets users link Gmail and open selected messages previously detected by Mail Monitor inside GamePilotAI.",
           },
           {
             kind: "paragraph",
-            text: "In the current version, limited information is processed, such as:",
+            text: "When a user opens a selected message, GamePilotAI retrieves its subject, sender, recipients, date and readable message text directly from Gmail. Attachments are currently listed by filename only and are not downloaded.",
           },
           {
             kind: "list",
             items: [
-              "the sender's email address.",
-              "the date and time of the message.",
-              "the message ID.",
-              "some available labels and metadata.",
+              "the sender, recipient and subject headers and date of the selected message.",
+              "the readable text content of the selected message.",
+              "the Gmail message ID and metadata needed for notification detection.",
             ],
           },
           {
             kind: "paragraph",
-            text: "The feature uses the Gmail Metadata permission granted by Google.",
+            text: "This feature uses the Gmail gmail.readonly permission. Technically, this permission can allow access to messages and settings in the connected Gmail account. However, the feature retrieves message content only for a message the user explicitly opens in Mail Monitor.",
           },
           {
             kind: "paragraph",
-            text: "We confirm that the current version does not read the content of Gmail messages or their subject lines, and does not extract security verification codes (OTP), passwords or account recovery links.",
+            text: "Retrieved message content is transmitted to the user for display and is not stored as message content in the GamePilotAI database. Email HTML is not rendered as active HTML, and external images and attachments are not loaded. Gmail data is not used to train or improve AI models.",
           },
           {
             kind: "paragraph",
