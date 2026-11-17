@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
   const last = lastSync.get(user.id) ?? 0;
   if (Date.now() - last < WINDOW_MS) {
-    return jsonError("A sync just ran. Try again in a minute.", 429, { code: "RATE_LIMITED" });
+    return jsonError("A sync just ran. Try again in a few seconds.", 429, { code: "RATE_LIMITED" });
   }
   lastSync.set(user.id, Date.now());
 
