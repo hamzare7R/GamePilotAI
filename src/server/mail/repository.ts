@@ -318,10 +318,11 @@ export async function reclassifyStoredNotifications(userId: string) {
   }
 }
 
-export async function listNotifications(userId: string, limit = 50) {
+export async function getNotificationForUser(userId: string, notificationId: string) {
   await ensureMailSchema();
   const result = await getPool().query<{
     id: string;
+    gmail_message_id: string;
     service_name: string;
     message_category: string;
     sender_domain: string;
@@ -330,7 +331,41 @@ export async function listNotifications(userId: string, limit = 50) {
     processing_status: string;
     created_at: Date;
   }>(
-    `SELECT id, service_name, message_category, sender_domain, sender_address, received_at,
+    `SELECT id, gmail_message_id, service_name, message_category, sender_domain, sender_address,
+            received_at, processing_status, created_at
+       FROM gmail_notifications
+      WHERE user_id = $1 AND id = $2
+      LIMIT 1`,
+    [userId, notificationId],
+  );
+  const row = result.rows[0];
+  return row ? {
+    id: row.id,
+    gmailMessageId: row.gmail_message_id,
+    serviceName: row.service_name,
+    messageCategory: row.message_category,
+    senderDomain: row.sender_domain,
+    senderAddress: row.sender_address,
+    receivedAt: row.received_at,
+    processingStatus: row.processing_status,
+    createdAt: row.created_at,
+  } satisfies MailNotification : null;
+}
+
+export async function listNotifications(userId: string, limit = 50) {
+  await ensureMailSchema();
+  const result = await getPool().query<{
+    id: string;
+    gmail_message_id: string;
+    service_name: string;
+    message_category: string;
+    sender_domain: string;
+    sender_address: string;
+    received_at: Date | null;
+    processing_status: string;
+    created_at: Date;
+  }>(
+    `SELECT id, gmail_message_id, service_name, message_category, sender_domain, sender_address, received_at,
             processing_status, created_at
        FROM gmail_notifications
       WHERE user_id = $1
@@ -341,6 +376,7 @@ export async function listNotifications(userId: string, limit = 50) {
 
   return result.rows.map<MailNotification>((row) => ({
     id: row.id,
+    gmailMessageId: row.gmail_message_id,
     serviceName: row.service_name,
     messageCategory: row.message_category,
     senderDomain: row.sender_domain,
