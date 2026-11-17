@@ -2,7 +2,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { requireGmailConfig } from "./env";
 
-export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.metadata";
+export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 export const GMAIL_STATE_COOKIE = "gp_gmail_state";
 export const GMAIL_STATE_TTL_SECONDS = 10 * 60;
 
