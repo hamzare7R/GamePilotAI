@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 
 import { isGmailConfigured, requireGmailConfig } from "@/lib/gmail/env";
 import { fetchMailboxHistoryId, startInboxWatch } from "@/lib/gmail/gmail-client";
-import { exchangeAuthorizationCode, GMAIL_STATE_COOKIE, readOAuthState } from "@/lib/gmail/oauth";
+import { exchangeAuthorizationCode, GMAIL_SCOPE, GMAIL_STATE_COOKIE, readOAuthState } from "@/lib/gmail/oauth";
 import { encryptToken } from "@/lib/gmail/token-encryption";
 import { getSessionUser } from "@/server/auth/user";
 import {
@@ -63,6 +63,12 @@ export async function GET(request: Request) {
   try {
     const config = requireGmailConfig();
     const tokens = await exchangeAuthorizationCode(code);
+
+    const grantedScopes = new Set((tokens.scope ?? "").split(/\s+/).filter(Boolean));
+    if (!grantedScopes.has(GMAIL_SCOPE)) {
+      console.warn("[gmail:callback] required read-only scope was not granted.");
+      return clearStateCookie(redirectTo(request, "scope_missing"));
+    }
 
     if (!tokens.refresh_token) {
       // prompt=consent was requested, so this means Google withheld the token.
