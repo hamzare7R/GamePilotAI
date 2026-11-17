@@ -19,8 +19,8 @@ export async function POST(request: Request) {
       return jsonOk({ disconnected: false, revoked: false });
     }
 
-    // Local data is already gone; revocation is best effort so a Google outage
-    // cannot trap the user in a connected state.
+    // Stored Mail Monitor data is retained. Only the OAuth credential is revoked
+    // and cleared; a Google outage cannot trap the user in a connected state.
     let revoked = false;
     try {
       await revokeGoogleToken(decryptToken(removed.encryptedRefreshToken));
