@@ -22,7 +22,7 @@ export function AdminLoginForm() {
 
     try {
       await apiClient.post("/admin/login", { password });
-      router.replace("/admin/games");
+      router.replace("/admin");
       router.refresh();
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Sign in failed. Please retry.");

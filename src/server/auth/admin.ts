@@ -95,6 +95,24 @@ export async function hasAdminSession() {
   return verifyAdminSessionToken(store.get(ADMIN_COOKIE_NAME)?.value);
 }
 
+/** Verified session metadata for the owner console header. */
+export async function getAdminSessionInfo(): Promise<{ expiresAt: string } | null> {
+  const store = await cookies();
+  const token = store.get(ADMIN_COOKIE_NAME)?.value;
+  if (!token || !verifyAdminSessionToken(token)) return null;
+
+  const [encoded] = token.split(".");
+  if (!encoded) return null;
+
+  try {
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString()) as SessionPayload;
+    if (!Number.isFinite(payload.exp)) return null;
+    return { expiresAt: new Date(payload.exp).toISOString() };
+  } catch {
+    return null;
+  }
+}
+
 function hasValidOrigin(request: Request) {
   const origin = request.headers.get("origin");
   if (!origin) return true;

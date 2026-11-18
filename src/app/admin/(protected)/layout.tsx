@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Gamepad2, Inbox } from "lucide-react";
 
-import { AdminLogoutButton } from "@/components/admin/admin-logout-button";
-import { Logo } from "@/components/layout/logo";
-import { Badge } from "@/components/ui/badge";
+import { AdminHeader } from "@/components/admin/admin-header";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { Button } from "@/components/ui/button";
-import { hasAdminSession, isAdminAuthConfigured } from "@/server/auth/admin";
+import {
+  getAdminSessionInfo,
+  hasAdminSession,
+  isAdminAuthConfigured,
+} from "@/server/auth/admin";
+import { getAdminSystemStatus } from "@/server/admin/overview";
 
 // Sessions are read from cookies on every request; never prerender or cache.
 export const dynamic = "force-dynamic";
@@ -34,37 +37,23 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
 
   if (!(await hasAdminSession())) redirect("/admin/login");
 
-  return (
-    <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:py-8">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <Badge variant="outline">Owner area</Badge>
-        </div>
-        <nav aria-label="Admin" className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/games">
-              <ArrowLeft aria-hidden="true" />
-              Storefront
-            </Link>
-          </Button>
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/admin/games">
-              <Gamepad2 aria-hidden="true" />
-              Custom games
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm">
-            <Link href="/admin/mail-monitor">
-              <Inbox aria-hidden="true" />
-              Mail monitor
-            </Link>
-          </Button>
-          <AdminLogoutButton />
-        </nav>
-      </header>
+  const [session, systemStatus] = await Promise.all([getAdminSessionInfo(), getAdminSystemStatus()]);
 
-      {children}
+  return (
+    <div className="min-h-dvh lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
+      <a
+        href="#main"
+        className="sr-only rounded-md bg-primary px-4 py-2 text-primary-foreground focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50"
+      >
+        Skip to content
+      </a>
+      <AdminSidebar />
+      <div className="flex min-h-dvh flex-col">
+        <AdminHeader session={session} systemStatus={systemStatus} />
+        <main id="main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full max-w-6xl">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }

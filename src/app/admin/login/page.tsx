@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLoginPage() {
-  if (await hasAdminSession()) redirect("/admin/games");
+  if (await hasAdminSession()) redirect("/admin");
 
   const configured = isAdminAuthConfigured();
 

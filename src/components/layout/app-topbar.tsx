@@ -198,7 +198,7 @@ export function AppTopbar({
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/games">
+                  <Link href="/admin">
                     <ShieldCheck />
                     Owner Area
                   </Link>
