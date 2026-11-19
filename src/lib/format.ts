@@ -14,6 +14,28 @@ export function formatBytes(value: number | null | undefined) {
   return `${amount.toFixed(exponent === 0 || amount >= 10 ? 0 : 1)} ${units[exponent]}`;
 }
 
+export function formatDate(iso: string) {
+  const timestamp = new Date(iso).getTime();
+  if (!Number.isFinite(timestamp)) return "—";
+  return new Date(timestamp).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function formatDateTime(iso: string) {
+  const timestamp = new Date(iso).getTime();
+  if (!Number.isFinite(timestamp)) return "—";
+  return new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function formatRelativeTime(iso: string) {
   const timestamp = new Date(iso).getTime();
   if (!Number.isFinite(timestamp)) return "Unknown";

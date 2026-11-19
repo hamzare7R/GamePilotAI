@@ -1,6 +1,7 @@
 import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
 
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { jsonError } from "@/server/http";
 
@@ -93,6 +94,15 @@ export function adminCookieOptions() {
 export async function hasAdminSession() {
   const store = await cookies();
   return verifyAdminSessionToken(store.get(ADMIN_COOKIE_NAME)?.value);
+}
+
+/**
+ * Layouts and pages render concurrently, so a redirect in the protected layout
+ * alone can still stream page output to an anonymous request. Data pages must
+ * await this before reading anything.
+ */
+export async function requireAdminPage() {
+  if (!isAdminAuthConfigured() || !(await hasAdminSession())) redirect("/admin/login");
 }
 
 /** Verified session metadata for the owner console header. */

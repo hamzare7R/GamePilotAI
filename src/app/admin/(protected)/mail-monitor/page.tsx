@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SERVICE_LABELS, type ServiceKey } from "@/lib/gmail/service-map";
+import { requireAdminPage } from "@/server/auth/admin";
 import { getAdminMailSummary } from "@/server/mail/repository";
 import type { AdminMailSummary } from "@/server/mail/types";
 
@@ -22,6 +23,8 @@ function Metric({ label, value }: { label: string; value: string | number }) {
 }
 
 export default async function AdminMailMonitorPage() {
+  await requireAdminPage();
+
   let summary: AdminMailSummary | null = null;
   try {
     summary = await getAdminMailSummary();

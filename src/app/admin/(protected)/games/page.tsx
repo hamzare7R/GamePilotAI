@@ -6,6 +6,7 @@ import { CustomGamesTable } from "@/components/admin/custom-games-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { requireAdminPage } from "@/server/auth/admin";
 import { listCustomGamesForAdmin } from "@/server/custom-games/service";
 import {
   CustomGameStoreUnavailableError,
@@ -37,6 +38,8 @@ export default async function AdminGamesPage({
 }: {
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
+  await requireAdminPage();
+
   const params = await searchParams;
   const query = params.q?.trim() ?? "";
   const status = parseStatus(params.status);

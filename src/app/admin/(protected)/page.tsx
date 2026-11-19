@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { formatBytes, formatCount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getAdminOverview } from "@/server/admin/overview";
+import { requireAdminPage } from "@/server/auth/admin";
 
 export const metadata: Metadata = {
   title: "Overview",
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminOverviewPage() {
+  await requireAdminPage();
   const overview = await getAdminOverview();
   const { metrics, databaseStatus } = overview;
 

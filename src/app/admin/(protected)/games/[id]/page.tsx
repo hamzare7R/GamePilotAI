@@ -7,6 +7,7 @@ import { CustomGameForm } from "@/components/admin/custom-game-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { customGameStatusLabels } from "@/types/custom-game";
+import { requireAdminPage } from "@/server/auth/admin";
 import { getCustomGameForAdmin } from "@/server/custom-games/service";
 import { describeStoreError } from "@/server/custom-games/types";
 
@@ -20,6 +21,8 @@ export default async function EditCustomGamePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPage();
+
   const { id } = await params;
 
   let game = null;
