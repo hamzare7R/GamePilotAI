@@ -328,3 +328,50 @@ export async function getMessageContent(accessToken: string, messageId: string):
     attachments,
   };
 }
+
+export type MessageHtmlContent = {
+  id: string;
+  html: string | null;
+  text: string | null;
+};
+
+/**
+ * Fetches the original HTML part on demand for owner diagnostics. The result is
+ * never written back to the database; storage only keeps the plain-text body.
+ */
+export async function getMessageHtmlContent(
+  accessToken: string,
+  messageId: string,
+): Promise<MessageHtmlContent> {
+  const query = new URLSearchParams({ format: "full" });
+  const response = await gmailFetch({
+    accessToken,
+    path: `/users/me/messages/${encodeURIComponent(messageId)}?${query.toString()}`,
+  });
+  const json = (await response.json().catch(() => null)) as
+    | {
+        id?: string;
+        payload?: { mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
+      }
+    | null;
+
+  if (!json?.id || !json.payload) {
+    throw new GmailRequestError("Gmail message content was empty.", "MESSAGE_INVALID", 502);
+  }
+
+  const htmlParts: string[] = [];
+  const textParts: string[] = [];
+  const visit = (part: GmailMessagePart) => {
+    if (!part.filename && part.body?.data) {
+      const decoded = decodeMessageData(part.body.data);
+      if (part.mimeType === "text/html") htmlParts.push(decoded);
+      else if (part.mimeType === "text/plain") textParts.push(decoded);
+    }
+    for (const child of part.parts ?? []) visit(child);
+  };
+  visit(json.payload);
+
+  const html = htmlParts.join("\n").trim();
+  const text = textParts.join("\n").trim();
+  return { id: json.id, html: html || null, text: text || null };
+}

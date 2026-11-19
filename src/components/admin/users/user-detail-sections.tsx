@@ -275,6 +275,90 @@ export function ConnectedServicesCard({ detail }: { detail: AdminUserDetail }) {
   );
 }
 
+export function SyncDiagnosticsCard({ detail }: { detail: AdminUserDetail }) {
+  const { sync } = detail;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sync &amp; Neon storage diagnostics</CardTitle>
+        <CardDescription>
+          Live aggregates from the mail tables for this user. Nothing is written by viewing this
+          page.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <MiniStat label="Stored messages" value={formatCount(sync.totalMessages)} />
+          <MiniStat label="With text content" value={formatCount(sync.messagesWithContent)} />
+          <MiniStat label="Without content" value={formatCount(sync.messagesWithoutContent)} />
+          <MiniStat label="Stored text size" value={formatBytes(sync.messageTextBytes)} />
+          <MiniStat label="Stored attachments" value={formatCount(sync.totalAttachments)} />
+          <MiniStat label="Attachments with bytes" value={formatCount(sync.attachmentsWithContent)} />
+          <MiniStat label="Attachment storage" value={formatBytes(sync.attachmentBytes)} />
+          <MiniStat
+            label="Size mismatches"
+            value={formatCount(sync.attachmentSizeMismatches)}
+            title="Rows where octet_length(content) differs from the recorded byte_size"
+          />
+        </div>
+
+        <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Field label="Pending sync queue">{formatCount(sync.pendingSyncMessages)}</Field>
+          <Field label="Last successful sync">
+            {sync.lastSuccessAt ? (
+              <span title={formatDateTime(sync.lastSuccessAt)}>
+                {formatRelativeTime(sync.lastSuccessAt)}
+              </span>
+            ) : (
+              "None recorded"
+            )}
+          </Field>
+          <Field label="Last failed sync">
+            {sync.lastFailureAt ? (
+              <span title={formatDateTime(sync.lastFailureAt)}>
+                {formatRelativeTime(sync.lastFailureAt)}
+              </span>
+            ) : (
+              "None recorded"
+            )}
+          </Field>
+          <Field label="Last sync error code">
+            {sync.lastErrorCode ? (
+              <span className="font-mono text-[11px] text-destructive/90">{sync.lastErrorCode}</span>
+            ) : (
+              <span className="text-xs text-muted-foreground">None recorded</span>
+            )}
+          </Field>
+        </dl>
+
+        <div className="space-y-2 rounded-lg border border-border/70 bg-background/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            <span className="font-semibold text-foreground">Retrieval test:</span> use the Attachments
+            Explorer below to read a stored BYTEA from Neon and compare the measured length with the
+            recorded size. Message text is read back by opening any message. User linkage is enforced
+            by joining every query on <span className="font-mono">user_id</span>.
+          </p>
+          <p
+            className="font-mono text-[11px]"
+            title="Duplicate protection in gmail_notifications"
+          >
+            Duplicate guard: unique (connection_id, gmail_message_id) plus a transaction advisory
+            lock — a 23505 here means two concurrent inserts of the same Gmail message, not a bug in
+            user linkage.
+          </p>
+          {sync.attachmentSizeMismatches > 0 ? (
+            <p className="text-destructive">
+              {formatCount(sync.attachmentSizeMismatches)} attachment(s) report a stored length that
+              differs from their recorded byte size. They were not modified.
+            </p>
+          ) : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function RecentSyncEventsCard({ detail }: { detail: AdminUserDetail }) {
   return (
     <Card>
