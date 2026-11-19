@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { AttachmentExplorer } from "@/components/admin/users/attachment-explorer";
 import { MessageExplorer } from "@/components/admin/users/message-explorer";
 import { OAuthDiagnosticsCard } from "@/components/admin/users/oauth-diagnostics-card";
+import { ReprocessCard } from "@/components/admin/users/reprocess-card";
 import {
   AccountInformationCard,
   ConnectedServicesCard,
@@ -18,6 +19,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
+import { getLatestReprocessSummary } from "@/server/admin/reprocess";
 import {
   getAdminUserDetail,
   listAdminUserAttachments,
@@ -44,10 +46,11 @@ export default async function AdminUserDetailPage({
   const messagePage = Number.parseInt(msg_page ?? "1", 10);
   const attachmentPage = Number.parseInt(att_page ?? "1", 10);
 
-  const [user, messages, attachments] = await Promise.all([
+  const [user, messages, attachments, reprocess] = await Promise.all([
     getAdminUserDetail(id),
     listAdminUserMessages({ userId: id, page: Number.isFinite(messagePage) ? messagePage : 1 }),
     listAdminUserAttachments({ userId: id, page: Number.isFinite(attachmentPage) ? attachmentPage : 1 }),
+    getLatestReprocessSummary(id),
   ]);
 
   if (!user) notFound();
@@ -57,7 +60,7 @@ export default async function AdminUserDetailPage({
       <PageHeader
         eyebrow="User details"
         title={user.displayName || user.email}
-        description={`${user.email} · registered ${formatDate(user.createdAt)}. Read-only view built from stored account, session and mail data.`}
+        description={`${user.email} · registered ${formatDate(user.createdAt)}. Diagnostics view built from stored account, session and mail data.`}
         actions={
           <Button asChild variant="secondary">
             <Link href="/admin/users">
@@ -82,13 +85,23 @@ export default async function AdminUserDetailPage({
 
       <OAuthDiagnosticsCard userId={user.id} oauth={user.oauth} gmailStatus={user.gmail?.status ?? null} />
       <SyncDiagnosticsCard detail={user} />
+      <ReprocessCard
+        userId={user.id}
+        initialSummary={reprocess}
+        canRun={
+          user.gmail?.status === "active" &&
+          user.oauth.configConfigured &&
+          user.oauth.tokenStored
+        }
+      />
       <RecentSyncEventsCard detail={user} />
 
       <p className="text-xs text-muted-foreground">
         Password hashes, session token hashes and OAuth tokens are never read or displayed. Message
         text and attachment bytes are shown read-only, scoped to this user: HTML renders only inside a
-        sandboxed frame and non-image/PDF attachments are download-only. Nothing on this page writes
-        to the database.
+        sandboxed frame and non-image/PDF attachments are download-only. Everything on this page is
+        read-only except the explicit MIME reprocessing action, which only rewrites message text
+        fields for this user.
       </p>
     </div>
   );

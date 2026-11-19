@@ -1,3 +1,5 @@
+import { decodeBase64Url, parseMessageContent, type GmailPart } from "./mime";
+
 const GMAIL_BASE = "https://gmail.googleapis.com/gmail/v1";
 
 export class GmailRequestError extends Error {
@@ -218,52 +220,25 @@ export type MessageContent = {
   attachments: Array<{ filename: string; mimeType: string; data: Buffer }>;
 };
 
-type GmailMessagePart = {
+type GmailPayload = {
+  headers?: Array<{ name?: string; value?: string }>;
   mimeType?: string;
-  filename?: string;
-  body?: { data?: string; attachmentId?: string; size?: number };
-  parts?: GmailMessagePart[];
+  body?: { data?: string };
+  parts?: GmailPart[];
 };
 
-function decodeMessageData(value: string) {
-  return Buffer.from(value.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
-}
-
-function decodeHtmlEntities(value: string) {
-  return value
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\da-f]+);/gi, (_match, code: string) => String.fromCodePoint(parseInt(code, 16)));
-}
-
-function htmlToPlainText(value: string) {
-  return decodeHtmlEntities(
-    value
-      .replace(/<head[\s\S]*?<\/head>/gi, " ")
-      .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-      .replace(/<(br|hr)\s*\/?\s*>/gi, "\n")
-      .replace(/<\/(p|div|li|tr|h[1-6])>/gi, "\n")
-      .replace(/<[^>]*>/g, " "),
-  ).replace(/[ \t]+/g, " ").replace(/\n[ \t]+/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-export async function getMessageContent(accessToken: string, messageId: string): Promise<MessageContent> {
+export async function getMessageContent(
+  accessToken: string,
+  messageId: string,
+  options: { includeAttachments?: boolean } = {},
+): Promise<MessageContent> {
   const query = new URLSearchParams({ format: "full" });
   const response = await gmailFetch({
     accessToken,
     path: `/users/me/messages/${encodeURIComponent(messageId)}?${query.toString()}`,
   });
   const json = (await response.json().catch(() => null)) as
-    | {
-        id?: string;
-        snippet?: string;
-        payload?: { headers?: Array<{ name?: string; value?: string }>; mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
-      }
+    | { id?: string; snippet?: string; payload?: GmailPayload }
     | null;
 
   if (!json?.id || !json.payload) {
@@ -275,55 +250,39 @@ export async function getMessageContent(accessToken: string, messageId: string):
     if (header.name && header.value) headers[header.name.toLowerCase()] = header.value;
   }
 
-  const textParts: string[] = [];
-  const htmlParts: string[] = [];
-  const attachmentParts: Array<{ filename: string; mimeType: string; attachmentId?: string; data?: string; size?: number }> = [];
-  const visit = (part: GmailMessagePart) => {
-    if (part.filename) {
-      attachmentParts.push({
-        filename: part.filename.slice(0, 180),
-        mimeType: part.mimeType ?? "application/octet-stream",
-        attachmentId: part.body?.attachmentId,
-        data: part.body?.data,
-        size: part.body?.size,
-      });
-    } else if (part.body?.data) {
-      const decoded = decodeMessageData(part.body.data);
-      if (part.mimeType === "text/plain") textParts.push(decoded);
-      else if (part.mimeType === "text/html") htmlParts.push(decoded);
-    }
-    for (const child of part.parts ?? []) visit(child);
-  };
-  visit(json.payload);
+  const parsed = parseMessageContent(json.payload);
 
   // Store real attachment bytes, with strict per-file and per-message bounds.
+  // Reprocessing stored text passes includeAttachments=false so existing
+  // attachment rows are neither re-downloaded nor rewritten.
   const attachments: MessageContent["attachments"] = [];
   let totalAttachmentBytes = 0;
-  for (const part of attachmentParts.slice(0, 10)) {
-    if (part.size && part.size > 10 * 1024 * 1024) continue;
-    let data: Buffer | null = null;
-    if (part.data) {
-      data = Buffer.from(part.data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
-    } else if (part.attachmentId) {
-      const attachmentResponse = await gmailFetch({
-        accessToken,
-        path: `/users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.attachmentId)}`,
-      });
-      const attachmentJson = (await attachmentResponse.json().catch(() => null)) as { data?: string; size?: number } | null;
-      if (attachmentJson?.data) {
-        data = Buffer.from(attachmentJson.data.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+  if (options.includeAttachments !== false) {
+    for (const part of parsed.attachments.slice(0, 10)) {
+      if (part.size && part.size > 10 * 1024 * 1024) continue;
+      let data: Buffer | null = null;
+      if (part.data) {
+        data = decodeBase64Url(part.data);
+      } else if (part.attachmentId) {
+        const attachmentResponse = await gmailFetch({
+          accessToken,
+          path: `/users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(part.attachmentId)}`,
+        });
+        const attachmentJson = (await attachmentResponse.json().catch(() => null)) as { data?: string; size?: number } | null;
+        if (attachmentJson?.data) {
+          data = decodeBase64Url(attachmentJson.data);
+        }
       }
+      if (!data || data.length > 10 * 1024 * 1024 || totalAttachmentBytes + data.length > 20 * 1024 * 1024) continue;
+      totalAttachmentBytes += data.length;
+      attachments.push({ filename: part.filename, mimeType: part.mimeType, data });
     }
-    if (!data || data.length > 10 * 1024 * 1024 || totalAttachmentBytes + data.length > 20 * 1024 * 1024) continue;
-    totalAttachmentBytes += data.length;
-    attachments.push({ filename: part.filename, mimeType: part.mimeType, data });
   }
 
-  const rawText = textParts.length ? textParts.join("\n\n") : htmlParts.map(htmlToPlainText).join("\n\n");
   return {
     id: json.id,
     headers,
-    bodyText: rawText.slice(0, 100_000),
+    bodyText: parsed.bodyText,
     snippet: (json.snippet ?? "").slice(0, 500),
     attachments,
   };
@@ -349,29 +308,19 @@ export async function getMessageHtmlContent(
     path: `/users/me/messages/${encodeURIComponent(messageId)}?${query.toString()}`,
   });
   const json = (await response.json().catch(() => null)) as
-    | {
-        id?: string;
-        payload?: { mimeType?: string; body?: { data?: string }; parts?: GmailMessagePart[] };
-      }
+    | { id?: string; payload?: GmailPayload }
     | null;
 
   if (!json?.id || !json.payload) {
     throw new GmailRequestError("Gmail message content was empty.", "MESSAGE_INVALID", 502);
   }
 
-  const htmlParts: string[] = [];
-  const textParts: string[] = [];
-  const visit = (part: GmailMessagePart) => {
-    if (!part.filename && part.body?.data) {
-      const decoded = decodeMessageData(part.body.data);
-      if (part.mimeType === "text/html") htmlParts.push(decoded);
-      else if (part.mimeType === "text/plain") textParts.push(decoded);
-    }
-    for (const child of part.parts ?? []) visit(child);
+  // Resolution mirrors getMessageContent: one HTML alternative, never a
+  // concatenation of every HTML copy in the tree.
+  const parsed = parseMessageContent(json.payload);
+  return {
+    id: json.id,
+    html: parsed.html?.trim() || null,
+    text: parsed.text?.trim() || null,
   };
-  visit(json.payload);
-
-  const html = htmlParts.join("\n").trim();
-  const text = textParts.join("\n").trim();
-  return { id: json.id, html: html || null, text: text || null };
 }

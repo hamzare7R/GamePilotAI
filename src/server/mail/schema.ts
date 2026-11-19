@@ -89,6 +89,35 @@ const CREATE_SCHEMA = `
     ON gmail_sync_events (pubsub_message_id)
     WHERE pubsub_message_id IS NOT NULL;
 
+  -- Owner-triggered MIME reprocessing of already stored messages. Rows here are
+  -- progress bookkeeping only; message and attachment tables are never deleted.
+  CREATE TABLE IF NOT EXISTS gmail_reprocess_runs (
+    id text PRIMARY KEY,
+    user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    connection_id text NOT NULL REFERENCES gmail_connections(id) ON DELETE CASCADE,
+    status text NOT NULL DEFAULT 'running',
+    upper_bound_id text,
+    total integer NOT NULL DEFAULT 0,
+    processed integer NOT NULL DEFAULT 0,
+    updated integer NOT NULL DEFAULT 0,
+    failed integer NOT NULL DEFAULT 0,
+    cursor_id text,
+    last_error_code text,
+    lease_expires_at timestamptz,
+    started_at timestamptz NOT NULL DEFAULT now(),
+    completed_at timestamptz,
+    updated_at timestamptz NOT NULL DEFAULT now()
+  );
+
+  -- One active run per user; the second start fails with 23505 instead of
+  -- interleaving two batch writers on the same account.
+  CREATE UNIQUE INDEX IF NOT EXISTS gmail_reprocess_runs_active_unique
+    ON gmail_reprocess_runs (user_id)
+    WHERE status IN ('running', 'paused');
+
+  CREATE INDEX IF NOT EXISTS gmail_reprocess_runs_user_started_idx
+    ON gmail_reprocess_runs (user_id, started_at DESC);
+
   CREATE TABLE IF NOT EXISTS connected_services (
     id text PRIMARY KEY,
     user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
