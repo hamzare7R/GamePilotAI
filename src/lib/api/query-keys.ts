@@ -16,6 +16,7 @@ export const queryKeys = {
   library: {
     all: ["library"] as const,
     list: (params: ListLibraryParams = {}) => [...queryKeys.library.all, "list", params] as const,
+    membership: () => [...queryKeys.library.all, "membership"] as const,
   },
   player: {
     all: ["player"] as const,

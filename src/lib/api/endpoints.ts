@@ -6,6 +6,7 @@ export const endpoints = {
   },
   library: {
     list: "/library",
+    membership: "/library/ids",
     detail: (entryId: string) => `/library/${encodeURIComponent(entryId)}`,
   },
   player: {

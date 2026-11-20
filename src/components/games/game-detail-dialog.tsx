@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, Loader2, Plus, RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 
+import { LibraryActionButton } from "@/components/games/library-action-button";
 import { RatingBadge } from "@/components/games/rating-badge";
 import { GameImage } from "@/components/media/game-image";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformMeta } from "@/config/catalog";
 import { useGameDetail } from "@/hooks/api/use-game-detail";
-import { formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
+import { formatReleaseDate, isNewRelease } from "@/lib/catalog";
 import { CUSTOM_PLACEHOLDER_HERO } from "@/lib/custom-game";
 import { isRenderableImageUrl } from "@/lib/image-url";
 import type { GameCatalogEntry, GameDetailResult } from "@/types/catalog";
@@ -27,7 +28,11 @@ type GameDetailDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   inLibrary: boolean;
-  onToggleLibrary: (game: GameCatalogEntry) => void;
+  onToggleLibrary?: (game: GameCatalogEntry) => void;
+  libraryAvailable?: boolean;
+  libraryUnavailable?: boolean;
+  libraryStatusPending?: boolean;
+  libraryBusy?: boolean;
   onSelectGame?: (game: GameCatalogEntry) => void;
   /** Lets the admin preview render an unpublished entry without fetching it. */
   detailOverride?: GameDetailResult | null;
@@ -39,13 +44,16 @@ export function GameDetailDialog({
   onOpenChange,
   inLibrary,
   onToggleLibrary,
+  libraryAvailable = false,
+  libraryUnavailable = false,
+  libraryStatusPending = false,
+  libraryBusy = false,
   onSelectGame,
   detailOverride,
 }: GameDetailDialogProps) {
   const detailQuery = useGameDetail(game?.id, open && !detailOverride);
   const detail = detailOverride?.game ?? detailQuery.data?.game ?? game;
   const similar = detailOverride?.similar ?? detailQuery.data?.similar ?? [];
-  const players = formatPlayers(detail?.playersOnline);
   const isLoadingDetail = !detailOverride && detailQuery.isPending && Boolean(game);
   const screenshots = (detail?.screenshots ?? []).filter(isRenderableImageUrl);
 
@@ -70,11 +78,6 @@ export function GameDetailDialog({
                     <Badge variant="success">Custom entry</Badge>
                   ) : null}
                   {isNewRelease(detail) ? <Badge variant="blue">New release</Badge> : null}
-                  {detail.trendingRank ? (
-                    <Badge variant="outline" className="bg-black/40">
-                      #{detail.trendingRank} trending
-                    </Badge>
-                  ) : null}
                 </div>
                 <DialogTitle className="font-display text-2xl font-semibold sm:text-3xl">
                   {detail.title}
@@ -88,7 +91,9 @@ export function GameDetailDialog({
             <div className="space-y-5 px-5 pb-5">
               {detailQuery.isError ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                  <span className="flex-1">Couldn&apos;t load the full details for this game.</span>
+                  <span className="flex-1">
+                    Full details are temporarily unavailable for this game.
+                  </span>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -130,27 +135,30 @@ export function GameDetailDialog({
                   <p className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
                     Available on
                   </p>
-                  <ul className="mt-2 space-y-1.5">
-                    {detail.platforms.map((platform) => {
-                      const meta = platformMeta[platform];
-                      const Icon = meta.icon;
+                  {detail.platforms.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5">
+                      {detail.platforms.map((platform) => {
+                        const meta = platformMeta[platform];
+                        const Icon = meta.icon;
 
-                      return (
-                        <li
-                          key={platform}
-                          className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
-                        >
-                          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-                            <Icon className={`size-4 ${meta.accent}`} aria-hidden="true" />
-                            {meta.label}
-                          </span>
-                          <span className="text-[11px] text-muted-foreground">
-                            · {meta.coverage}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        return (
+                          <li
+                            key={platform}
+                            className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
+                          >
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                              <Icon className={`size-4 ${meta.accent}`} aria-hidden="true" />
+                              {meta.label}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Platform availability is not listed for this title.
+                    </p>
+                  )}
                 </div>
 
                 <dl className="space-y-2 text-xs">
@@ -172,12 +180,6 @@ export function GameDetailDialog({
                       {formatReleaseDate(detail.releaseDate)}
                     </dd>
                   </div>
-                  {players ? (
-                    <div className="flex items-baseline justify-between gap-3">
-                      <dt className="text-muted-foreground">Playing now</dt>
-                      <dd className="text-right font-medium">{players}</dd>
-                    </div>
-                  ) : null}
                 </dl>
               </div>
 
@@ -265,23 +267,14 @@ export function GameDetailDialog({
                 <DialogClose asChild>
                   <Button variant="ghost">Close</Button>
                 </DialogClose>
-                <Button
-                  variant={inLibrary ? "secondary" : "default"}
-                  aria-pressed={inLibrary}
-                  onClick={() => onToggleLibrary(detail)}
-                >
-                  {inLibrary ? (
-                    <>
-                      <Check aria-hidden="true" />
-                      In your library
-                    </>
-                  ) : (
-                    <>
-                      <Plus aria-hidden="true" />
-                      Add to library
-                    </>
-                  )}
-                </Button>
+                <LibraryActionButton
+                  inLibrary={inLibrary}
+                  available={libraryAvailable}
+                  unavailable={libraryUnavailable}
+                  statusPending={libraryStatusPending}
+                  busy={libraryBusy}
+                  onToggle={() => onToggleLibrary?.(detail)}
+                />
               </DialogFooter>
             </div>
           </>

@@ -30,6 +30,8 @@ const genreByRawgSlug: Record<string, GameGenre> = {
 const tagByRawgSlug: Record<string, GameGenre> = {
   "open-world": "open-world",
   survival: "survival",
+  horror: "horror",
+  "survival-horror": "horror",
   multiplayer: "multiplayer",
   "online-multiplayer": "multiplayer",
 };
@@ -75,6 +77,7 @@ const genreFilterByGenre: Record<GameGenre, { param: "genres" | "tags"; slug: st
   survival: { param: "tags", slug: "survival" },
   "open-world": { param: "tags", slug: "open-world" },
   multiplayer: { param: "tags", slug: "multiplayer" },
+  // "other" is a local display fallback; RAWG has no equivalent catalog filter.
   other: null,
 };
 
@@ -109,7 +112,7 @@ function mapPlatforms(game: RawgGame): GamePlatform[] {
     const rule = platformRules.find((candidate) => candidate.match.test(slug));
     if (rule) platforms.add(rule.platform);
   }
-  return platforms.size > 0 ? Array.from(platforms) : ["pc"];
+  return Array.from(platforms);
 }
 
 function mapRating(rating: number | undefined): number | undefined {

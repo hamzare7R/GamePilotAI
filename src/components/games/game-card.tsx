@@ -1,10 +1,10 @@
-import { Play } from "lucide-react";
+import { Info } from "lucide-react";
 
 import { PlatformStack } from "@/components/games/platform-stack";
 import { GameImage } from "@/components/media/game-image";
 import { RatingBadge } from "@/components/games/rating-badge";
 import { Badge } from "@/components/ui/badge";
-import { describeGameTags, formatPlayers, formatReleaseDate, isNewRelease } from "@/lib/catalog";
+import { describeGameTags, formatReleaseDate, isNewRelease } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import type { GameCatalogEntry } from "@/types/catalog";
 
@@ -53,7 +53,7 @@ export function GameCard({ game, onOpen, showReleaseDate, className }: GameCardP
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <span className="flex size-12 translate-y-2 items-center justify-center rounded-full border border-white/25 bg-white/10 opacity-0 backdrop-blur-md transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
-            <Play className="size-5 fill-white text-white" aria-hidden="true" />
+            <Info className="size-5 text-white" aria-hidden="true" />
           </span>
         </div>
       </div>
@@ -65,14 +65,7 @@ export function GameCard({ game, onOpen, showReleaseDate, className }: GameCardP
             {describeGameTags(game)} · {dateLabel}
           </p>
         </div>
-        <div className="flex items-center justify-between gap-2">
-          <PlatformStack platforms={game.platforms} limit={4} />
-          {game.playersOnline ? (
-            <span className="shrink-0 text-[11px] text-muted-foreground">
-              {formatPlayers(game.playersOnline)} online
-            </span>
-          ) : null}
-        </div>
+        <PlatformStack platforms={game.platforms} limit={4} />
       </div>
 
       <button

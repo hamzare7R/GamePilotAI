@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { listCatalog } from "@/server/catalog/service";
 import { jsonError, jsonOk } from "@/server/http";
+import { CATALOG_MAX_PAGE, CATALOG_MAX_PAGE_SIZE } from "@/types/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -32,15 +33,14 @@ const genreSchema = z.enum([
   "survival",
   "open-world",
   "multiplayer",
-  "other",
 ]);
 
 const querySchema = z.object({
   search: z.string().trim().max(120).optional(),
   platform: platformSchema.optional(),
   genre: genreSchema.optional(),
-  page: z.coerce.number().int().min(1).max(100).default(1),
-  pageSize: z.coerce.number().int().min(1).max(40).default(20),
+  page: z.coerce.number().int().min(1).max(CATALOG_MAX_PAGE).default(1),
+  pageSize: z.coerce.number().int().min(1).max(CATALOG_MAX_PAGE_SIZE).default(20),
 });
 
 export async function GET(request: NextRequest) {
@@ -53,7 +53,9 @@ export async function GET(request: NextRequest) {
         ? "Unsupported platform filter. Use one of: pc, playstation, xbox, switch, android, ios, cloud."
         : field === "genre"
           ? "Unsupported genre filter."
-          : "Invalid catalog query parameters.";
+          : field === "page"
+            ? "Page number is outside the supported catalog range."
+            : "Invalid catalog query parameters.";
     return jsonError(message, 400, { code: "INVALID_QUERY" });
   }
 

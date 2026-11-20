@@ -25,7 +25,15 @@ export type GameGenre =
   | "multiplayer"
   | "other";
 
-export type GameStatus = "backlog" | "playing" | "completed" | "dropped" | "wishlist";
+export type GameStatus = "backlog" | "playing" | "completed" | "dropped";
+
+export type LibraryGameSource = "rawg" | "custom" | "mock";
+
+export const LIBRARY_STATUSES = ["backlog", "playing", "completed", "dropped"] as const;
+
+export const LIBRARY_DEFAULT_PAGE_SIZE = 20;
+export const LIBRARY_MAX_PAGE_SIZE = 40;
+export const LIBRARY_MAX_PAGE = 1000;
 
 export type Game = {
   id: string;
@@ -42,13 +50,25 @@ export type Game = {
 export type LibraryEntry = {
   id: string;
   gameId: string;
+  gameSource: LibraryGameSource;
+  gameTitle: string;
+  gameSlug: string;
+  gameCoverUrl: string;
   game?: Game;
   status: GameStatus;
-  platform: GamePlatform;
-  hoursPlayed: number;
+  platform?: GamePlatform;
+  playtimeMinutes: number;
   progress: number;
   addedAt: string;
   lastPlayedAt?: string;
+  updatedAt: string;
+};
+
+export type LibraryMembershipEntry = {
+  entryId: string;
+  gameId: string;
+  gameSource: LibraryGameSource;
+  status: GameStatus;
 };
 
 export type ListGamesParams = {
@@ -61,14 +81,21 @@ export type ListGamesParams = {
 
 export type ListLibraryParams = {
   status?: GameStatus;
+  search?: string;
+  platform?: GamePlatform;
   page?: number;
   pageSize?: number;
 };
 
 export type AddLibraryEntryInput = {
   gameId: string;
-  platform: GamePlatform;
+  platform?: GamePlatform;
   status?: GameStatus;
 };
 
-export type UpdateLibraryEntryInput = Partial<Pick<LibraryEntry, "status" | "platform" | "progress">>;
+export type UpdateLibraryEntryInput = {
+  status?: GameStatus;
+  platform?: GamePlatform | null;
+  progress?: number;
+  playtimeMinutes?: number;
+};

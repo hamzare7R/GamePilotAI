@@ -1,10 +1,12 @@
-import type {
-  CatalogFilters,
-  CatalogPage,
-  CatalogQueryParams,
-  CatalogSections,
-  GameCatalogEntry,
-  GameDetailResult,
+import {
+  CATALOG_MAX_PAGE,
+  CATALOG_MAX_PAGE_SIZE,
+  type CatalogFilters,
+  type CatalogPage,
+  type CatalogQueryParams,
+  type CatalogSections,
+  type GameCatalogEntry,
+  type GameDetailResult,
 } from "@/types/catalog";
 
 import { customGameToCatalogEntry, normalizeGameTitle } from "@/lib/custom-game";
@@ -32,12 +34,14 @@ const RAWG_PAGE_SIZE = 40;
 const CUSTOM_ID_PATTERN = /^custom-/i;
 
 function clampPage(value: number | undefined) {
-  return Number.isFinite(value) ? Math.min(100, Math.max(1, Math.trunc(value as number))) : 1;
+  return Number.isFinite(value)
+    ? Math.min(CATALOG_MAX_PAGE, Math.max(1, Math.trunc(value as number)))
+    : 1;
 }
 
 function clampPageSize(value: number | undefined) {
   return Number.isFinite(value)
-    ? Math.min(40, Math.max(1, Math.trunc(value as number)))
+    ? Math.min(CATALOG_MAX_PAGE_SIZE, Math.max(1, Math.trunc(value as number)))
     : 20;
 }
 
@@ -50,12 +54,15 @@ function shiftDays(date: Date, days: number) {
 }
 
 function buildPagination(page: number, pageSize: number, total: number, hasNextPage: boolean) {
+  const availablePages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.min(availablePages, CATALOG_MAX_PAGE);
+
   return {
     page,
     pageSize,
     total,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
-    hasNextPage,
+    totalPages,
+    hasNextPage: hasNextPage && page < totalPages,
     hasPreviousPage: page > 1,
   };
 }
@@ -65,6 +72,19 @@ function dedupe(games: readonly GameCatalogEntry[]) {
   return games.filter((game) => {
     if (seen.has(game.id)) return false;
     seen.add(game.id);
+    return true;
+  });
+}
+
+function dedupeCustomEntries(games: readonly GameCatalogEntry[]) {
+  const seenIds = new Set<string>();
+  const seenTitles = new Set<string>();
+
+  return games.filter((game) => {
+    const title = normalizeGameTitle(game.title);
+    if (seenIds.has(game.id) || (title.length > 0 && seenTitles.has(title))) return false;
+    seenIds.add(game.id);
+    if (title.length > 0) seenTitles.add(title);
     return true;
   });
 }
@@ -131,7 +151,11 @@ async function safeCustomEntries(params: CatalogQueryParams): Promise<GameCatalo
 /**
  * Custom entries are prepended to the RAWG result space. RAWG's page offsets are
  * shifted by the custom count, so the rawg page is fetched at 40 items per page
- * and sliced, keeping pagination stable as entries are added.
+ * and sliced.
+ *
+ * Cross-source duplicates are rejected when an owner entry is created. Filtering
+ * them here would change the offset after the rawg page was chosen and could skip
+ * otherwise valid RAWG results.
  */
 async function fetchRawgPageMerged(
   params: CatalogQueryParams,
@@ -139,8 +163,9 @@ async function fetchRawgPageMerged(
 ): Promise<CatalogPage> {
   const page = clampPage(params.page);
   const pageSize = clampPageSize(params.pageSize);
+  const customs = dedupeCustomEntries(customPool);
   const start = (page - 1) * pageSize;
-  const rawgSkip = Math.max(0, start - customPool.length);
+  const rawgSkip = Math.max(0, start - customs.length);
   const rawgPage = Math.floor(rawgSkip / RAWG_PAGE_SIZE) + 1;
 
   const response = await rawgFetch<RawgListResponse>(
@@ -148,13 +173,6 @@ async function fetchRawgPageMerged(
     rawgQuery(params, rawgPage, RAWG_PAGE_SIZE),
   );
   const rawgEntries = dedupe(response.results.map(mapRawgGame));
-
-  // Safety net on top of the create-time check: hide a custom entry if RAWG
-  // already returns a title with the same normalized name.
-  const rawgTitles = new Set(rawgEntries.map((game) => normalizeGameTitle(game.title)));
-  const customs = customPool.filter(
-    (game) => !rawgTitles.has(normalizeGameTitle(game.title)),
-  );
 
   const items: GameCatalogEntry[] = [];
   if (start < customs.length) {
@@ -235,7 +253,15 @@ async function fetchRawgSections(): Promise<CatalogSections> {
     throw new CatalogUnavailableError("RAWG returned an empty catalog");
   }
 
-  return { featured, trending, popular, upcoming, recentlyReleased, source: "rawg" };
+  return {
+    featured,
+    trending,
+    popular,
+    upcoming,
+    recentlyReleased,
+    source: "rawg",
+    availability: "live",
+  };
 }
 
 export async function listCatalog(params: CatalogQueryParams = {}): Promise<CatalogPage> {
@@ -262,7 +288,7 @@ export async function getCatalogSections(): Promise<CatalogSections> {
       "[catalog] RAWG unavailable, serving the bundled catalog:",
       error instanceof Error ? error.message : error,
     );
-    return mockCatalogSections();
+    return mockCatalogSections("fallback");
   }
 }
 

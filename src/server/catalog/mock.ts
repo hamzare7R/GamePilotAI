@@ -2,6 +2,7 @@ import { catalogGames } from "@/data/games";
 import { filterGames } from "@/lib/catalog";
 import { normalizeGameTitle } from "@/lib/custom-game";
 import type {
+  CatalogAvailability,
   CatalogPage,
   CatalogQueryParams,
   CatalogSections,
@@ -67,7 +68,9 @@ export function mockCatalogPage(
   };
 }
 
-export function mockCatalogSections(): CatalogSections {
+export function mockCatalogSections(
+  availability: CatalogAvailability = "demo",
+): CatalogSections {
   const today = new Date();
   const todayIso = today.toISOString().slice(0, 10);
   const recentCutoff = new Date(today.getTime() - RECENT_WINDOW_DAYS * DAY_MS)
@@ -97,7 +100,15 @@ export function mockCatalogSections(): CatalogSections {
     .slice(0, 8)
     .map(withSource);
 
-  return { featured, trending, popular, upcoming, recentlyReleased, source: "mock" };
+  return {
+    featured,
+    trending,
+    popular,
+    upcoming,
+    recentlyReleased,
+    source: "mock",
+    availability,
+  };
 }
 
 export function mockGameDetail(gameId: string): GameDetailResult {

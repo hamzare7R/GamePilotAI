@@ -5,6 +5,7 @@ import type { Paginated } from "@/types/api";
 import type {
   AddLibraryEntryInput,
   LibraryEntry,
+  LibraryMembershipEntry,
   ListLibraryParams,
   UpdateLibraryEntryInput,
 } from "@/types/game";
@@ -16,6 +17,10 @@ export const libraryService = {
     });
   },
 
+  membership() {
+    return apiClient.get<LibraryMembershipEntry[]>(endpoints.library.membership);
+  },
+
   add(input: AddLibraryEntryInput) {
     return apiClient.post<LibraryEntry>(endpoints.library.list, input);
   },
@@ -25,6 +30,6 @@ export const libraryService = {
   },
 
   remove(entryId: string) {
-    return apiClient.delete<void>(endpoints.library.detail(entryId));
+    return apiClient.delete<{ removed: boolean }>(endpoints.library.detail(entryId));
   },
 };

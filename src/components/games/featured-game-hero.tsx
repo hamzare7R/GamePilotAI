@@ -1,17 +1,22 @@
-import { Check, Info, Plus, Sparkles, Star, Users } from "lucide-react";
+import { Info, Sparkles, Star } from "lucide-react";
 
+import { LibraryActionButton } from "@/components/games/library-action-button";
 import { PlatformStack } from "@/components/games/platform-stack";
 import { GameImage } from "@/components/media/game-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatPlayers, formatReleaseDate } from "@/lib/catalog";
+import { formatReleaseDate } from "@/lib/catalog";
 import { CUSTOM_PLACEHOLDER_HERO } from "@/lib/custom-game";
 import type { GameCatalogEntry } from "@/types/catalog";
 
 type FeaturedGameHeroProps = {
   game: GameCatalogEntry;
   inLibrary: boolean;
-  onToggleLibrary: (game: GameCatalogEntry) => void;
+  onToggleLibrary?: (game: GameCatalogEntry) => void;
+  libraryAvailable?: boolean;
+  libraryUnavailable?: boolean;
+  libraryStatusPending?: boolean;
+  libraryBusy?: boolean;
   onOpen: (game: GameCatalogEntry) => void;
 };
 
@@ -19,9 +24,13 @@ export function FeaturedGameHero({
   game,
   inLibrary,
   onToggleLibrary,
+  libraryAvailable = false,
+  libraryUnavailable = false,
+  libraryStatusPending = false,
+  libraryBusy = false,
   onOpen,
 }: FeaturedGameHeroProps) {
-  const players = formatPlayers(game.playersOnline);
+  const hasDetails = Boolean(game.developer || game.publisher || game.platforms.length > 0);
 
   return (
     <section
@@ -47,11 +56,6 @@ export function FeaturedGameHero({
             <Sparkles className="size-3" aria-hidden="true" />
             Featured
           </span>
-          {game.trendingRank ? (
-            <Badge variant="blue" className="border-brand-cyan/30 bg-black/40 backdrop-blur-md">
-              #{game.trendingRank} trending
-            </Badge>
-          ) : null}
           <Badge variant="outline" className="border-white/15 bg-black/40 text-foreground/80 backdrop-blur-md">
             {formatReleaseDate(game.releaseDate)}
           </Badge>
@@ -81,35 +85,21 @@ export function FeaturedGameHero({
               <span className="text-amber-200/60">/ 10</span>
             </span>
           ) : null}
-          {players ? (
-            <span className="inline-flex items-center gap-1.5">
-              <Users className="size-4" aria-hidden="true" />
-              {players} playing now
-            </span>
-          ) : null}
           <PlatformStack platforms={game.platforms} size="md" />
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Button
+          <LibraryActionButton
             size="lg"
-            variant={inLibrary ? "secondary" : "default"}
-            aria-pressed={inLibrary}
-            onClick={() => onToggleLibrary(game)}
-            className={inLibrary ? "border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/15" : undefined}
-          >
-            {inLibrary ? (
-              <>
-                <Check aria-hidden="true" />
-                In your library
-              </>
-            ) : (
-              <>
-                <Plus aria-hidden="true" />
-                Add to library
-              </>
-            )}
-          </Button>
+            inLibrary={inLibrary}
+            available={libraryAvailable}
+            unavailable={libraryUnavailable}
+            statusPending={libraryStatusPending}
+            busy={libraryBusy}
+            className="border-white/15 bg-white/5 backdrop-blur-md"
+            inLibraryClassName="border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/15"
+            onToggle={() => onToggleLibrary?.(game)}
+          />
           <Button
             size="lg"
             variant="secondary"
@@ -121,26 +111,30 @@ export function FeaturedGameHero({
           </Button>
         </div>
 
-        <dl className="hidden flex-wrap gap-x-8 gap-y-2 border-t border-white/10 pt-4 text-xs sm:flex">
-          {game.developer ? (
-            <div>
-              <dt className="text-muted-foreground/70">Developer</dt>
-              <dd className="mt-0.5 font-medium text-foreground/90">{game.developer}</dd>
-            </div>
-          ) : null}
-          {game.publisher ? (
-            <div>
-              <dt className="text-muted-foreground/70">Publisher</dt>
-              <dd className="mt-0.5 font-medium text-foreground/90">{game.publisher}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt className="text-muted-foreground/70">Platforms</dt>
-            <dd className="mt-0.5 font-medium text-foreground/90">
-              {game.platforms.length} supported
-            </dd>
-          </div>
-        </dl>
+        {hasDetails ? (
+          <dl className="hidden flex-wrap gap-x-8 gap-y-2 border-t border-white/10 pt-4 text-xs sm:flex">
+            {game.developer ? (
+              <div>
+                <dt className="text-muted-foreground/70">Developer</dt>
+                <dd className="mt-0.5 font-medium text-foreground/90">{game.developer}</dd>
+              </div>
+            ) : null}
+            {game.publisher ? (
+              <div>
+                <dt className="text-muted-foreground/70">Publisher</dt>
+                <dd className="mt-0.5 font-medium text-foreground/90">{game.publisher}</dd>
+              </div>
+            ) : null}
+            {game.platforms.length > 0 ? (
+              <div>
+                <dt className="text-muted-foreground/70">Platforms</dt>
+                <dd className="mt-0.5 font-medium text-foreground/90">
+                  {game.platforms.length} supported
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        ) : null}
       </div>
     </section>
   );

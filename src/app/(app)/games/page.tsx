@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import {
   CalendarClock,
@@ -17,6 +18,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { resolveSessionState } from "@/server/auth/session-state";
+import { USER_COOKIE_NAME } from "@/server/auth/user";
 import { getCatalogSections } from "@/server/catalog/service";
 
 export const revalidate = 3600;
@@ -24,13 +27,13 @@ export const revalidate = 3600;
 export const metadata: Metadata = {
   title: "Games",
   description:
-    "Explore a live games database: featured titles, trending and popular games, upcoming releases, categories, platform filters and instant search.",
+    "Explore a live games database: featured titles, most-added and popular games, upcoming releases, categories, platform filters and instant search.",
 };
 
 const jumpLinks = [
   { label: "Platforms", href: "#platforms", icon: Gamepad2 },
   { label: "Categories", href: "#categories", icon: LayoutGrid },
-  { label: "Trending", href: "#trending", icon: Flame },
+  { label: "Most added", href: "#trending", icon: Flame },
   { label: "Popular", href: "#popular", icon: TrendingUp },
   { label: "Upcoming", href: "#upcoming", icon: Rocket },
   { label: "New releases", href: "#new-releases", icon: CalendarClock },
@@ -38,7 +41,8 @@ const jumpLinks = [
 ];
 
 export default async function GamesPage() {
-  const sections = await getCatalogSections();
+  const [sections, cookieStore] = await Promise.all([getCatalogSections(), cookies()]);
+  const session = await resolveSessionState(cookieStore.get(USER_COOKIE_NAME)?.value);
 
   const hasGames =
     Boolean(sections.featured) ||
@@ -52,19 +56,31 @@ export default async function GamesPage() {
       <PageHeader
         eyebrow="Discovery center"
         title="Find your next world"
-        description="A launcher-grade view of the full games catalog: featured picks, trending and popular titles, upcoming releases, categories, platform filters and live search."
+        description="A launcher-grade view of the games catalog: featured picks, most-added and popular titles, upcoming releases, categories, platform filters and search."
         actions={
           <>
             <Badge
-              variant={sections.source === "rawg" ? "success" : "outline"}
+              variant={
+                sections.availability === "live"
+                  ? "success"
+                  : sections.availability === "fallback"
+                    ? "destructive"
+                    : "outline"
+              }
               title={
-                sections.source === "rawg"
+                sections.availability === "live"
                   ? "Live data from the RAWG games database"
-                  : "Add RAWG_API_KEY to switch to the live games database"
+                  : sections.availability === "fallback"
+                    ? "Live game data is temporarily unavailable. Showing the demo catalog."
+                    : "Live game data is not available. Showing the demo catalog."
               }
             >
               <Sparkles aria-hidden="true" />
-              {sections.source === "rawg" ? "Live · RAWG" : "Demo catalog"}
+              {sections.availability === "live"
+                ? "Live · RAWG"
+                : sections.availability === "fallback"
+                  ? "Demo · live data unavailable"
+                  : "Demo catalog"}
             </Badge>
             <Button asChild variant="secondary">
               <Link href="/library">
@@ -94,12 +110,12 @@ export default async function GamesPage() {
       </nav>
 
       {hasGames ? (
-        <GamesDiscovery sections={sections} />
+        <GamesDiscovery sections={sections} authState={session.state} />
       ) : (
         <EmptyState
           icon={Gamepad2}
           title="The catalog is empty"
-          description="The games database returned no titles. Check the RAWG key or try again in a moment."
+          description="The games catalog returned no titles. Please try again in a moment."
           action={
             <Button asChild variant="secondary">
               <Link href="/dashboard">Back to dashboard</Link>

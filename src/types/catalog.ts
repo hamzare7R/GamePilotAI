@@ -22,6 +22,9 @@ export type GameCatalogEntry = Omit<Game, "coverUrl"> & {
   source?: CatalogSource;
 };
 
+export const CATALOG_MAX_PAGE = 100;
+export const CATALOG_MAX_PAGE_SIZE = 40;
+
 export type PlatformFilter = GamePlatform | "all";
 export type GenreFilter = GameGenre | "all";
 
@@ -39,6 +42,12 @@ export const emptyCatalogFilters: CatalogFilters = {
 
 /** Where a catalog entry/response came from: RAWG, the bundled demo set, or the owner. */
 export type CatalogSource = "rawg" | "mock" | "custom";
+
+/**
+ * `live` means RAWG answered, `demo` means RAWG is not configured, and
+ * `fallback` means RAWG failed and the bundled catalog is being shown.
+ */
+export type CatalogAvailability = "live" | "demo" | "fallback";
 
 export type CatalogQueryParams = {
   search?: string;
@@ -59,6 +68,7 @@ export type CatalogSections = {
   upcoming: readonly GameCatalogEntry[];
   recentlyReleased: readonly GameCatalogEntry[];
   source: CatalogSource;
+  availability: CatalogAvailability;
 };
 
 export type GameDetailResult = {

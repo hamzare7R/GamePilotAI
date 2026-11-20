@@ -108,6 +108,8 @@ export function CatalogExplorer({
 
   const games = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
   const total = data?.pages[0]?.pagination.total ?? 0;
+  const isDemoResults = data?.pages[0]?.source === "mock";
+  const isTruncated = !hasNextPage && games.length > 0 && games.length < total;
   const isSettling = filters.query !== debouncedQuery;
   const isBusy = isSettling || (query.isFetching && !isFetchingNextPage);
   const errorCode = query.error instanceof ApiError ? query.error.code : undefined;
@@ -143,9 +145,9 @@ export function CatalogExplorer({
     ? isBusy
       ? "Updating results…"
       : query.isPending
-        ? "Searching the live catalog"
+        ? "Searching the catalog"
         : total > 0
-          ? `${total.toLocaleString("en-US")} games match your filters`
+          ? `${total.toLocaleString("en-US")} ${total === 1 ? "game" : "games"} found`
           : "No games match the current filters"
     : "Search titles, studios and genres across the whole catalog";
 
@@ -209,7 +211,7 @@ export function CatalogExplorer({
             {!searchMode ? (
               <Button variant="secondary" onClick={onBrowseAll} className="shrink-0">
                 <Layers aria-hidden="true" />
-                Browse all
+                Browse catalog
               </Button>
             ) : null}
           </div>
@@ -308,7 +310,7 @@ export function CatalogExplorer({
                   {filters.query.trim()
                     ? `Results for “${filters.query.trim()}”`
                     : browseAll
-                      ? "Every game in the catalog"
+                      ? "Browse the catalog"
                       : "Filtered catalog"}
                 </h2>
                 <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
@@ -318,13 +320,18 @@ export function CatalogExplorer({
                       ? "The catalog request failed"
                       : total === 0
                         ? "No titles found"
-                        : `${games.length} of ${total.toLocaleString("en-US")} titles loaded`}
+                        : total === 1 && games.length === 1
+                          ? "1 title loaded"
+                          : `${games.length} of ${total.toLocaleString("en-US")} ${total === 1 ? "title" : "titles"} loaded`}
                 </p>
               </div>
             </div>
-            <Badge variant="outline">
-              {total.toLocaleString("en-US")} {total === 1 ? "title" : "titles"}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isDemoResults ? <Badge variant="outline">Demo catalog</Badge> : null}
+              <Badge variant="outline">
+                {total.toLocaleString("en-US")} {total === 1 ? "title" : "titles"}
+              </Badge>
+            </div>
           </div>
 
           {query.isPending || (!isError && isBusy && games.length === 0) ? (
@@ -335,12 +342,12 @@ export function CatalogExplorer({
               className="flex flex-col items-center justify-center gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-12 text-center"
             >
               <p className="font-display text-base font-semibold">
-                {isInvalidFilter ? "That filter isn’t supported" : "Couldn’t reach the catalog"}
+                {isInvalidFilter ? "Some filters aren’t supported" : "Catalog temporarily unavailable"}
               </p>
               <p className="max-w-md text-sm text-muted-foreground">
                 {isInvalidFilter
-                  ? "Pick another platform, or reset the filters to see the full catalog."
-                  : "The live games database did not respond. Check your connection and try again."}
+                  ? "Reset the filters and try again with a supported platform or category."
+                  : "The games catalog did not respond. Please try again in a moment."}
               </p>
               {isInvalidFilter ? (
                 <Button variant="secondary" onClick={onReset}>
@@ -389,8 +396,10 @@ export function CatalogExplorer({
                     {isFetchingNextPage ? "Loading more…" : "Load more games"}
                   </Button>
                 ) : (
-                  <p className="text-xs text-muted-foreground">
-                    End of results · {total.toLocaleString("en-US")} titles
+                  <p className="text-center text-xs text-muted-foreground">
+                    {isTruncated
+                      ? `Showing the first ${games.length.toLocaleString("en-US")} of ${total.toLocaleString("en-US")} titles. Refine your search to narrow the catalog.`
+                      : `End of results · ${total.toLocaleString("en-US")} ${total === 1 ? "title" : "titles"}`}
                   </p>
                 )}
               </div>

@@ -14,7 +14,9 @@ export function useCatalogSearch(params: CatalogQueryParams, enabled: boolean) {
       catalogQueryService.search({ ...params, page: pageParam }, signal),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
-      lastPage.pagination.hasNextPage ? lastPage.pagination.page + 1 : undefined,
+      lastPage.pagination.hasNextPage && lastPage.items.length > 0
+        ? lastPage.pagination.page + 1
+        : undefined,
     enabled,
     staleTime: 5 * 60 * 1000,
     placeholderData: keepPreviousData,
