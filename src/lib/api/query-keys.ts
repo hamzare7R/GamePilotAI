@@ -12,6 +12,7 @@ export const queryKeys = {
     search: (params: CatalogQueryParams = {}) =>
       [...queryKeys.catalog.all, "search", params] as const,
     detail: (gameId: string) => [...queryKeys.catalog.all, "detail", gameId] as const,
+    similar: (gameId: string) => [...queryKeys.catalog.all, "similar", gameId] as const,
   },
   library: {
     all: ["library"] as const,

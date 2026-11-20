@@ -5,6 +5,7 @@ import {
   USER_COOKIE_NAME,
   type SessionUser,
 } from "@/server/auth/user";
+import { DatabaseUnavailableError, isDatabaseConnectionError } from "@/server/db/pool";
 import { jsonError } from "@/server/http";
 
 import { libraryFailure } from "./http";
@@ -38,6 +39,14 @@ export async function requireLibrarySession(request: NextRequest): Promise<Libra
     }
     return { ok: true, user };
   } catch (error) {
-    return { ok: false, response: libraryFailure(error, "session") };
+    return {
+      ok: false,
+      response: libraryFailure(
+        isDatabaseConnectionError(error)
+          ? new DatabaseUnavailableError("The library database could not be reached.")
+          : error,
+        "session",
+      ),
+    };
   }
 }

@@ -89,7 +89,9 @@ export function GamesDiscovery({ sections, authState }: GamesDiscoveryProps) {
     }
     if (libraryUnavailable) {
       setLibraryNotice(
-        "Your library is temporarily unavailable. Adding and removing games is paused.",
+        membershipFailure?.kind === "storage"
+          ? "Library storage has not been initialized on this deployment yet, so games cannot be added or removed."
+          : "Your library is temporarily unavailable. Adding and removing games is paused.",
       );
       return;
     }
@@ -195,7 +197,11 @@ export function GamesDiscovery({ sections, authState }: GamesDiscoveryProps) {
           <span>
             {membershipFailure.kind === "session"
               ? "Your session has expired, so your library status cannot be shown."
-              : "Your library status could not be loaded, so adding and removing games is paused."}
+              : membershipFailure.kind === "storage"
+                ? "Library storage has not been initialized on this deployment yet, so adding and removing games is unavailable."
+                : membershipFailure.kind === "temporary"
+                  ? "Your library status could not be loaded because the library database is temporarily unavailable. Adding and removing games is paused."
+                  : "Your library status could not be loaded, so adding and removing games is paused."}
           </span>
           {membershipFailure.kind === "session" ? (
             <Button size="sm" variant="secondary" asChild className="w-fit shrink-0">
@@ -204,7 +210,7 @@ export function GamesDiscovery({ sections, authState }: GamesDiscoveryProps) {
                 Sign in again
               </Link>
             </Button>
-          ) : (
+          ) : membershipFailure.kind === "storage" ? null : (
             <Button
               size="sm"
               variant="secondary"

@@ -18,6 +18,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { genreLabels, platformMeta } from "@/config/catalog";
 import { useGameDetail } from "@/hooks/api/use-game-detail";
+import { useSimilarGames } from "@/hooks/api/use-similar-games";
 import { formatReleaseDate, isNewRelease } from "@/lib/catalog";
 import { CUSTOM_PLACEHOLDER_HERO } from "@/lib/custom-game";
 import { isRenderableImageUrl } from "@/lib/image-url";
@@ -52,9 +53,12 @@ export function GameDetailDialog({
   detailOverride,
 }: GameDetailDialogProps) {
   const detailQuery = useGameDetail(game?.id, open && !detailOverride);
+  const similarQuery = useSimilarGames(game?.id, open && !detailOverride);
   const detail = detailOverride?.game ?? detailQuery.data?.game ?? game;
-  const similar = detailOverride?.similar ?? detailQuery.data?.similar ?? [];
+  const similar = detailOverride?.similar ?? similarQuery.data ?? [];
   const isLoadingDetail = !detailOverride && detailQuery.isPending && Boolean(game);
+  const isLoadingSimilar = !detailOverride && Boolean(game) && similarQuery.isPending;
+  const similarFailed = !detailOverride && similarQuery.isError;
   const screenshots = (detail?.screenshots ?? []).filter(isRenderableImageUrl);
 
   return (
@@ -206,9 +210,14 @@ export function GameDetailDialog({
               ) : null}
 
               <div className="space-y-3 border-t border-border/60 pt-4">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-display text-sm font-semibold">More like this</h3>
-                  {detailQuery.isFetching && !isLoadingDetail ? (
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-display text-sm font-semibold">More like this</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Discover games with similar genres and platforms.
+                    </p>
+                  </div>
+                  {similarQuery.isFetching && !isLoadingSimilar ? (
                     <Loader2
                       className="size-3.5 animate-spin text-muted-foreground"
                       aria-hidden="true"
@@ -216,8 +225,8 @@ export function GameDetailDialog({
                   ) : null}
                 </div>
 
-                {isLoadingDetail ? (
-                  <div className="grid grid-cols-3 gap-2.5" aria-hidden="true">
+                {isLoadingSimilar ? (
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3" aria-hidden="true">
                     {Array.from({ length: 3 }).map((_, index) => (
                       <div key={index} className="space-y-1.5">
                         <Skeleton className="aspect-3/4 w-full rounded-lg" />
@@ -225,40 +234,90 @@ export function GameDetailDialog({
                       </div>
                     ))}
                   </div>
+                ) : similarFailed ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    <span className="flex-1">
+                      Similar games are temporarily unavailable.
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => void similarQuery.refetch()}
+                      disabled={similarQuery.isFetching}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <RefreshCw
+                        className={similarQuery.isFetching ? "animate-spin" : undefined}
+                        aria-hidden="true"
+                      />
+                      Retry
+                    </Button>
+                  </div>
                 ) : similar.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {similar.map((similarGame) => (
-                      <button
-                        key={similarGame.id}
-                        type="button"
-                        onClick={() => onSelectGame?.(similarGame)}
-                        className="group text-left focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
-                      >
-                        <span className="relative block aspect-3/4 overflow-hidden rounded-lg border border-border/70 bg-card">
-                          <GameImage
-                            src={similarGame.coverUrl}
-                            alt={`${similarGame.title} cover art`}
-                            sizes="(min-width: 640px) 140px, 30vw"
-                            className="object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                          <span className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
-                          <RatingBadge
-                            rating={similarGame.rating}
-                            className="absolute top-1.5 left-1.5"
-                          />
-                        </span>
-                        <span className="mt-1.5 block truncate text-xs font-medium">
-                          {similarGame.title}
-                        </span>
-                        <span className="block truncate text-[10px] text-muted-foreground">
-                          {similarGame.releaseDate?.slice(0, 4) ?? "TBA"}
-                        </span>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                    {similar.map((similarGame) => {
+                      const genres = similarGame.genres
+                        .filter((genre) => genre !== "other")
+                        .slice(0, 2);
+                      const platforms = similarGame.platforms.slice(0, 3);
+
+                      return (
+                        <button
+                          key={similarGame.id}
+                          type="button"
+                          onClick={() => onSelectGame?.(similarGame)}
+                          aria-label={`View ${similarGame.title}`}
+                          className="group rounded-lg text-left focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:outline-none"
+                        >
+                          <span className="relative block aspect-3/4 overflow-hidden rounded-lg border border-border/70 bg-card">
+                            <GameImage
+                              src={similarGame.coverUrl}
+                              alt={`${similarGame.title} cover art`}
+                              sizes="(min-width: 640px) 140px, 40vw"
+                              className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                            <span className="absolute inset-0 bg-linear-to-t from-black/80 via-black/15 to-transparent" />
+                            <RatingBadge
+                              rating={similarGame.rating}
+                              className="absolute top-1.5 left-1.5"
+                            />
+                            <span className="absolute inset-x-2 bottom-2 block space-y-1">
+                              <span className="line-clamp-2 block text-xs font-semibold text-white">
+                                {similarGame.title}
+                              </span>
+                              {genres.length > 0 ? (
+                                <span className="flex flex-wrap gap-1">
+                                  {genres.map((genre) => (
+                                    <span
+                                      key={genre}
+                                      className="rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white/85"
+                                    >
+                                      {genreLabels[genre]}
+                                    </span>
+                                  ))}
+                                </span>
+                              ) : null}
+                            </span>
+                          </span>
+                          <span className="mt-1.5 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                            <span className="truncate">
+                              {platforms.length > 0
+                                ? platforms
+                                    .map((platform) => platformMeta[platform].shortLabel)
+                                    .join(" · ")
+                                : "Platforms TBA"}
+                            </span>
+                            <span className="shrink-0">
+                              {similarGame.releaseDate?.slice(0, 4) ?? "TBA"}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">
-                    No similar games found for this title.
+                    No similar games found for this title yet.
                   </p>
                 )}
               </div>

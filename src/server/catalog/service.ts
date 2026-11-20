@@ -26,6 +26,7 @@ import {
 import type { RawgGame, RawgListResponse } from "../rawg/types";
 import { CatalogNotFoundError, CatalogUnavailableError } from "./errors";
 import { mockCatalogPage, mockCatalogSections, mockGameDetail } from "./mock";
+import { fetchSimilarGamesFromRawg } from "./similar";
 
 const SECTION_LIMIT = 8;
 const SECTION_POOL = 18;
@@ -292,6 +293,36 @@ export async function getCatalogSections(): Promise<CatalogSections> {
   }
 }
 
+export async function getSimilarGames(gameId: string): Promise<GameCatalogEntry[]> {
+  if (CUSTOM_ID_PATTERN.test(gameId)) {
+    let game = null;
+    try {
+      game = await getPublishedCustomGame(gameId);
+    } catch (error) {
+      throw new CatalogUnavailableError(
+        error instanceof Error ? error.message : undefined,
+      );
+    }
+
+    if (!game) throw new CatalogNotFoundError();
+
+    return getCustomGameDetailEntries(game).catch(() => []);
+  }
+
+  if (!isRawgConfigured()) return [...mockGameDetail(gameId).similar];
+
+  try {
+    const seed = await rawgFetch<RawgGame>(`/games/${encodeURIComponent(gameId)}`);
+    return await fetchSimilarGamesFromRawg(seed);
+  } catch (error) {
+    if (error instanceof CatalogNotFoundError) throw error;
+    if (error instanceof RawgError && error.status === 404) {
+      throw new CatalogNotFoundError();
+    }
+    throw new CatalogUnavailableError();
+  }
+}
+
 export async function getGameDetail(gameId: string): Promise<GameDetailResult> {
   if (CUSTOM_ID_PATTERN.test(gameId)) {
     let game = null;
@@ -305,10 +336,9 @@ export async function getGameDetail(gameId: string): Promise<GameDetailResult> {
 
     if (!game) throw new CatalogNotFoundError();
 
-    const similar = await getCustomGameDetailEntries(game).catch(() => []);
     return {
       game: customGameToCatalogEntry(game),
-      similar,
+      similar: [],
       source: "custom",
     };
   }
@@ -317,14 +347,12 @@ export async function getGameDetail(gameId: string): Promise<GameDetailResult> {
 
   try {
     const game = await rawgFetch<RawgGame>(`/games/${encodeURIComponent(gameId)}`);
-    const suggested = await rawgFetch<RawgListResponse>(
-      `/games/${encodeURIComponent(gameId)}/suggested`,
-      { page_size: 6 },
-    ).catch(() => null);
 
     return {
       game: mapRawgDetail(game),
-      similar: suggested ? dedupe(suggested.results.map(mapRawgGame)).slice(0, 6) : [],
+      // Recommendations are served by /api/games/[id]/similar so a failure
+      // there never blocks the details response.
+      similar: [],
       source: "rawg",
     };
   } catch (error) {

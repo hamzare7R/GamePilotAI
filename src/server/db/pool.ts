@@ -20,6 +20,35 @@ export class DatabaseUnavailableError extends Error {
   }
 }
 
+const DATABASE_CONNECTION_CODES = new Set([
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ETIMEDOUT",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "EPIPE",
+  "08000",
+  "08001",
+  "08003",
+  "08004",
+  "08006",
+  "57P01",
+  "57P02",
+  "57P03",
+  "53300",
+]);
+
+/**
+ * `getPool()` only fails when configuration is missing; a configured but
+ * unreachable database rejects at query time with a socket or SQLSTATE code.
+ */
+export function isDatabaseConnectionError(error: unknown) {
+  const code = (error as { code?: unknown }).code;
+  return typeof code === "string" && DATABASE_CONNECTION_CODES.has(code);
+}
+
 /**
  * One pool per validated URL, reused across route handlers and builds so
  * serverless invocations do not open a new connection per request.

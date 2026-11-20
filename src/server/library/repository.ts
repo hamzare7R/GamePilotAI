@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
 
 import { librarySearchPattern } from "@/lib/library";
-import { getPool } from "@/server/db/pool";
+import {
+  DatabaseUnavailableError,
+  getPool,
+  isDatabaseConnectionError,
+} from "@/server/db/pool";
 import type { Paginated } from "@/types/api";
 import {
   LIBRARY_DEFAULT_PAGE_SIZE,
@@ -52,6 +56,9 @@ export type LibraryEntryUpdate = {
 function translateError(error: unknown) {
   if ((error as { code?: unknown }).code === "42P01") {
     return new LibraryNotReadyError();
+  }
+  if (isDatabaseConnectionError(error)) {
+    return new DatabaseUnavailableError("The library database could not be reached.");
   }
   return error;
 }

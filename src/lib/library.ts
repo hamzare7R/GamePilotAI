@@ -91,7 +91,7 @@ export function resolveLibraryLoadError(code: string | undefined): LibraryLoadEr
   };
 }
 
-export type MembershipFailureKind = "session" | "temporary" | "unknown";
+export type MembershipFailureKind = "session" | "storage" | "temporary" | "unknown";
 
 export type MembershipFailure = { kind: MembershipFailureKind };
 
@@ -99,9 +99,30 @@ export function describeMembershipFailure(error: unknown): MembershipFailure | n
   if (!error) return null;
 
   const status = (error as { status?: unknown }).status;
+  const code = (error as { code?: unknown }).code;
+
   if (status === 401) return { kind: "session" };
-  if (status === 503 || status === undefined) return { kind: "temporary" };
+  if (code === "LIBRARY_STORAGE_NOT_INITIALIZED") return { kind: "storage" };
+  if (code === "DATABASE_UNAVAILABLE" || status === 503 || status === undefined) {
+    return { kind: "temporary" };
+  }
   return { kind: "unknown" };
+}
+
+/**
+ * A missing table or a rejected session will not recover by itself; only
+ * outages and unexpected failures are worth another automatic attempt.
+ */
+export function isRetryableLibraryError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return true;
+
+  const status = (error as { status?: unknown }).status;
+  if (typeof status !== "number") return true;
+
+  if (status === 400 || status === 401 || status === 403 || status === 404) return false;
+
+  const code = (error as { code?: unknown }).code;
+  return code !== "LIBRARY_STORAGE_NOT_INITIALIZED";
 }
 
 export type LibraryMembershipMap = Map<string, LibraryMembershipEntry>;

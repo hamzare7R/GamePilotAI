@@ -11,6 +11,7 @@ import {
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/api/query-keys";
 import {
+  isRetryableLibraryError,
   libraryMembershipKey,
   removeLibraryMembershipEntry,
   setLibraryMembershipStatus,
@@ -32,11 +33,8 @@ type UpdateLibraryVariables = {
   input: UpdateLibraryEntryInput;
 };
 
-const NON_RETRYABLE_STATUSES = new Set([400, 401, 403, 404, 503]);
-
 function shouldRetry(failureCount: number, error: unknown) {
-  if (error instanceof ApiError && NON_RETRYABLE_STATUSES.has(error.status)) return false;
-  return failureCount < 2;
+  return failureCount < 2 && isRetryableLibraryError(error);
 }
 
 function useUnauthorizedRedirect() {

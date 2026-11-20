@@ -3,6 +3,7 @@ export const endpoints = {
   games: {
     list: "/games",
     detail: (gameId: string) => `/games/${encodeURIComponent(gameId)}`,
+    similar: (gameId: string) => `/games/${encodeURIComponent(gameId)}/similar`,
   },
   library: {
     list: "/library",

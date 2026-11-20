@@ -5,6 +5,7 @@ import {
   describeMembershipFailure,
   escapeLikePattern,
   formatPlaytime,
+  isRetryableLibraryError,
   libraryMembershipKey,
   librarySearchPattern,
   libraryStatusLabels,
@@ -112,6 +113,28 @@ describe("membership failure classification", () => {
     expect(describeMembershipFailure({ status: 503 })).toEqual({ kind: "temporary" });
     expect(describeMembershipFailure(new Error("network down"))).toEqual({ kind: "temporary" });
     expect(describeMembershipFailure({ status: 500 })).toEqual({ kind: "unknown" });
+  });
+
+  it("reports a missing library table as storage, not as an outage", () => {
+    expect(
+      describeMembershipFailure({ status: 503, code: "LIBRARY_STORAGE_NOT_INITIALIZED" }),
+    ).toEqual({ kind: "storage" });
+    expect(describeMembershipFailure({ status: 503, code: "DATABASE_UNAVAILABLE" })).toEqual({
+      kind: "temporary",
+    });
+  });
+});
+
+describe("library request retry policy", () => {
+  it("retries outages but not missing storage or auth problems", () => {
+    expect(isRetryableLibraryError(new Error("network down"))).toBe(true);
+    expect(isRetryableLibraryError({ status: 503, code: "DATABASE_UNAVAILABLE" })).toBe(true);
+    expect(isRetryableLibraryError({ status: 500 })).toBe(true);
+    expect(isRetryableLibraryError({ status: 503, code: "LIBRARY_STORAGE_NOT_INITIALIZED" })).toBe(
+      false,
+    );
+    expect(isRetryableLibraryError({ status: 401 })).toBe(false);
+    expect(isRetryableLibraryError({ status: 404 })).toBe(false);
   });
 });
 
